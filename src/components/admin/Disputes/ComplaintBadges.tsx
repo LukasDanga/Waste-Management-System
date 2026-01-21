@@ -14,17 +14,32 @@ export function SeverityBadge({ severity }: { severity: ComplaintSeverity }) {
   }
 }
 
+const STATUS_PRESETS: Record<ComplaintStatus, { label: string; className: string; icon: string }> = {
+  new: {
+    label: 'Chờ',
+    className: 'bg-blue-100 text-blue-700 border-blue-200',
+    icon: '🆕',
+  },
+  'in-progress': {
+    label: 'Đang xử lý',
+    className: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    icon: '🔄',
+  },
+  resolved: {
+    label: 'Đã giải quyết',
+    className: 'bg-green-100 text-green-700 border-green-200',
+    icon: '✅',
+  },
+  closed: {
+    label: 'Đã đóng',
+    className: 'bg-gray-100 text-gray-700 border-gray-200',
+    icon: '❌',
+  },
+};
+
 export function StatusBadge({ status }: { status: ComplaintStatus }) {
-  switch (status) {
-    case 'new':
-      return <Badge className="bg-blue-100 text-blue-700 border-blue-200">🆕 Mới</Badge>;
-    case 'in-progress':
-      return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">🔄 Đang xử lý</Badge>;
-    case 'resolved':
-      return <Badge className="bg-green-100 text-green-700 border-green-200">✅ Đã giải quyết</Badge>;
-    case 'closed':
-      return <Badge className="bg-gray-100 text-gray-700 border-gray-200">❌ Đóng</Badge>;
-    default:
-      return null;
-  }
+  const preset = STATUS_PRESETS[status];
+  if (!preset) return null;
+
+  return <Badge className={preset.className}>{preset.icon} {preset.label}</Badge>;
 }

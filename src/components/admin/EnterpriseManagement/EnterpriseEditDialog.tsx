@@ -130,7 +130,7 @@ export function EnterpriseEditDialog({ open, onOpenChange, enterprise, onSave }:
           </div>
 
           <DialogFooter className="pt-2">
-            <Button variant="ghost" className="border border-gray-200 text-gray-700" onClick={() => onOpenChange(false)}>
+            <Button className="border border-gray-200 text-gray-700" onClick={() => onOpenChange(false)}>
               Hủy
             </Button>
             <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleSave}>Lưu thay đổi</Button>

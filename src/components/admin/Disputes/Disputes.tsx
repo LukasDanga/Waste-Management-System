@@ -1,16 +1,19 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger } from '../../ui/tabs';
+import { AlertTriangle, Search } from 'lucide-react';
+import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { ComplaintCard } from './ComplaintCard';
 import { ComplaintDialog } from './ComplaintDialog';
 import { StatsCards } from './StatsCards';
-import type { Complaint } from './types';
+import type { Complaint, ComplaintStatus } from './types';
 import { toast } from 'sonner';
 
 export function Disputes() {
-  const [activeTab, setActiveTab] = useState('new');
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | ComplaintStatus>('all');
 
   const complaints: Complaint[] = [
     {
@@ -63,10 +66,17 @@ export function Disputes() {
     },
   ];
 
-  const filteredComplaints = useMemo(
-    () => complaints.filter((c) => (activeTab === 'all' ? true : c.status === activeTab)),
-    [complaints, activeTab]
-  );
+  const filteredComplaints = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return complaints.filter((c) => {
+      const matchesQuery =
+        !query ||
+        c.issue.toLowerCase().includes(query) ||
+        c.complaintId.toLowerCase().includes(query);
+      const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+      return matchesQuery && matchesStatus;
+    });
+  }, [complaints, searchQuery, statusFilter]);
 
   const handleSelectComplaint = (complaint: Complaint) => {
     setSelectedComplaint(complaint);
@@ -91,36 +101,49 @@ export function Disputes() {
 
       <StatsCards complaints={complaints} />
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="new">
-            🆕 Mới ({complaints.filter(c => c.status === 'new').length})
-          </TabsTrigger>
-          <TabsTrigger value="in-progress">
-            🔄 Đang xử lý ({complaints.filter(c => c.status === 'in-progress').length})
-          </TabsTrigger>
-          <TabsTrigger value="resolved">
-            ✅ Đã giải quyết ({complaints.filter(c => c.status === 'resolved').length})
-          </TabsTrigger>
-          <TabsTrigger value="closed">
-            ❌ Đóng ({complaints.filter(c => c.status === 'closed').length})
-          </TabsTrigger>
-        </TabsList>
-
-        <div className="space-y-4">
-          {filteredComplaints.map((complaint) => (
-            <ComplaintCard key={complaint.id} complaint={complaint} onSelect={handleSelectComplaint} />
-          ))}
-        </div>
-
-        {filteredComplaints.length === 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Không có khiếu nại nào</p>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="md:col-span-2">
+            <Label className="text-sm text-gray-600 mb-2 block">Tìm theo tên khiếu nại</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Nhập tên/vấn đề hoặc mã khiếu nại"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
           </div>
-        )}
-      </Tabs>
+          <div>
+            <Label className="text-sm text-gray-600 mb-2 block">Lọc trạng thái</Label>
+            <Select value={statusFilter} onValueChange={(value : any) => setStatusFilter(value as 'all' | ComplaintStatus)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="new">Chờ</SelectItem>
+                <SelectItem value="in-progress">Đang xử lý</SelectItem>
+                <SelectItem value="resolved">Đã giải quyết</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {filteredComplaints.map((complaint) => (
+          <ComplaintCard key={complaint.id} complaint={complaint} onSelect={handleSelectComplaint} />
+        ))}
+      </div>
+
+      {filteredComplaints.length === 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center mt-4">
+          <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">Không có khiếu nại nào</p>
+        </div>
+      )}
 
       <ComplaintDialog
         complaint={selectedComplaint}
