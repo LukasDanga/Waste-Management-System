@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Download, FileText, Printer } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
+import { Button } from '../../ui/button';
+import { Card } from '../../ui/card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
+} from '../../ui/select';
 import { 
   BarChart, 
   Bar, 
@@ -31,7 +31,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../ui/table';
+} from '../../ui/table';
 
 export function Analytics() {
   const [timeFilter, setTimeFilter] = useState('month');
@@ -98,15 +98,15 @@ export function Analytics() {
             <p className="text-gray-600">Phân tích dữ liệu hoạt động thu gom</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button className="h-9 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground text-sm">
               <FileText className="mr-2 h-4 w-4" />
               Xuất Excel
             </Button>
-            <Button variant="outline" size="sm">
+            <Button className="h-9 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground text-sm">
               <Download className="mr-2 h-4 w-4" />
               Xuất PDF
             </Button>
-            <Button variant="outline" size="sm">
+            <Button className="h-9 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground text-sm">
               <Printer className="mr-2 h-4 w-4" />
               In báo cáo
             </Button>
