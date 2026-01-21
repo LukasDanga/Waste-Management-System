@@ -1,0 +1,218 @@
+import { useState } from 'react';
+import { Eye, EyeOff, User, Lock, Recycle, Users, Building2, Truck, Settings, ArrowRight } from 'lucide-react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Card } from './ui/card';
+import { Checkbox } from './ui/checkbox';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+
+interface LoginPageProps {
+  onLogin: (username: string, role: string) => void;
+}
+
+interface DemoAccount {
+  icon: any;
+  role: string;
+  roleDisplay: string;
+  username: string;
+  password: string;
+  color: string;
+}
+
+export function LoginPage({ onLogin }: LoginPageProps) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  const demoAccounts: DemoAccount[] = [
+    {
+      icon: Users,
+      role: 'CITIZEN',
+      roleDisplay: 'Người dân',
+      username: 'citizen_demo',
+      password: 'citizen123',
+      color: 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+    },
+    {
+      icon: Building2,
+      role: 'ENTERPRISE',
+      roleDisplay: 'Doanh nghiệp',
+      username: 'enterprise_demo',
+      password: 'enterprise123',
+      color: 'bg-green-50 border-green-200 hover:bg-green-100'
+    },
+    {
+      icon: Truck,
+      role: 'COLLECTOR',
+      roleDisplay: 'Nhân viên thu gom',
+      username: 'collector_demo',
+      password: 'collector123',
+      color: 'bg-orange-50 border-orange-200 hover:bg-orange-100'
+    },
+    {
+      icon: Settings,
+      role: 'ADMIN',
+      roleDisplay: 'Quản trị viên',
+      username: 'admin_demo',
+      password: 'admin123',
+      color: 'bg-purple-50 border-purple-200 hover:bg-purple-100'
+    }
+  ];
+
+  const handleAutoFill = (account: DemoAccount) => {
+    setUsername(account.username);
+    setPassword(account.password);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username && password) {
+      // Find the role based on username
+      const account = demoAccounts.find(acc => acc.username === username);
+      onLogin(username, account?.role || 'CITIZEN');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Left Side - Illustration */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-500 via-emerald-600 to-teal-700 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <ImageWithFallback
+            src="https://images.unsplash.com/reserve/bOvf94dPRxWu0u3QsPjF_tree.jpg?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncmVlbiUyMG5hdHVyZSUyMGJhY2tncm91bmR8ZW58MXx8fHwxNzY4MTkxOTQ2fDA&ixlib=rb-4.1.0&q=80&w=1080"
+            alt="Green nature background"
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="relative z-10 flex flex-col items-center justify-center w-full p-12 text-white">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white">
+              <Recycle className="h-10 w-10 text-green-600" />
+            </div>
+            <span className="text-4xl font-bold">EcoWaste</span>
+          </div>
+          <h2 className="text-3xl font-bold mb-4 text-center">
+            Hệ Thống Quản Lý Rác Thải Thông Minh
+          </h2>
+          <p className="text-lg text-center text-green-50 max-w-md">
+            Kết nối cộng đồng, bảo vệ môi trường và tái chế hiệu quả cho một tương lai xanh
+          </p>
+        </div>
+      </div>
+
+      {/* Right Side - Login Form */}
+      <div className="flex-1 flex items-center justify-center p-6 bg-gray-50">
+        <div className="w-full max-w-md space-y-6">
+          {/* Logo for mobile */}
+          <div className="flex lg:hidden items-center justify-center gap-2 mb-8">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-600">
+              <Recycle className="h-7 w-7 text-white" />
+            </div>
+            <span className="text-2xl font-bold">EcoWaste</span>
+          </div>
+
+          {/* Login Form */}
+          <Card className="p-8 shadow-lg bg-white">
+            <h2 className="text-2xl font-bold text-center mb-6">Đăng nhập hệ thống</h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Username Input */}
+              <div className="space-y-2">
+                <label className="text-sm">Tên đăng nhập</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="Nhập tên đăng nhập"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="pl-10 bg-input-background"
+                  />
+                </div>
+              </div>
+
+              {/* Password Input */}
+              <div className="space-y-2">
+                <label className="text-sm">Mật khẩu</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Nhập mật khẩu"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 bg-input-background"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember Me */}
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                />
+                <label htmlFor="remember" className="text-sm cursor-pointer">
+                  Ghi nhớ đăng nhập
+                </label>
+              </div>
+
+              {/* Submit Button */}
+              <Button 
+                type="submit"
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                size="lg"
+              >
+                Đăng nhập
+              </Button>
+            </form>
+          </Card>
+
+          {/* Demo Accounts */}
+          <div className="space-y-4">
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-700 bg-white inline-block px-4 py-2 rounded-full shadow-sm border">
+                📋 Tài khoản demo - Nhấn để điền tự động
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              {demoAccounts.map((account, index) => {
+                const Icon = account.icon;
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleAutoFill(account)}
+                    className={`${account.color} border-2 rounded-lg p-4 transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] text-left`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-5 w-5" />
+                        <div>
+                          <div className="font-semibold text-sm">{account.roleDisplay}</div>
+                          <div className="text-xs text-gray-600 font-mono">
+                            {account.username} / {account.password}
+                          </div>
+                        </div>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-gray-400" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
