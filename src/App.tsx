@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { Homepage } from './components/Homepage';
 import { LoginPage } from './components/LoginPage';
-import { CitizenDashboard } from './components/CitizenDashboard';
+import { CitizenDashboard } from './components/citizen/CitizenDashboard';
 import { EnterpriseDashboard } from './components/EnterpriseDashboard';
 import { CollectorDashboard } from './components/CollectorDashboard';
 import { AdminDashboard } from './components/admin/AdminDashboard';

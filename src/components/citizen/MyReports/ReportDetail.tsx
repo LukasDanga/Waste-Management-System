@@ -1,7 +1,7 @@
 import { ArrowLeft, MapPin, Calendar, Award, MessageSquare, XCircle, CheckCircle } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { Badge } from '../ui/badge';
+import { Button } from '../../ui/button';
+import { Card } from '../../ui/card';
+import { Badge } from '../../ui/badge';
 
 interface ReportDetailProps {
   onNavigate: (section: string) => void;
@@ -71,9 +71,8 @@ export function ReportDetail({ onNavigate, reportData }: ReportDetailProps) {
       {/* Header */}
       <div className="mb-6">
         <Button
-          variant="ghost"
           onClick={() => onNavigate('my-reports')}
-          className="mb-4"
+          className="mb-4 bg-transparent hover:bg-gray-100 text-gray-700"
         >
           <ArrowLeft className="mr-2 h-5 w-5" />
           Quay lại
@@ -200,8 +199,7 @@ export function ReportDetail({ onNavigate, reportData }: ReportDetailProps) {
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
         <Button
-          variant="outline"
-          className="flex-1 sm:flex-initial"
+          className="flex-1 sm:flex-initial border border-gray-300 bg-white hover:bg-gray-50"
           onClick={() => onNavigate('feedback')}
         >
           <MessageSquare className="mr-2 h-5 w-5" />
@@ -209,8 +207,7 @@ export function ReportDetail({ onNavigate, reportData }: ReportDetailProps) {
         </Button>
         {report.status === 'pending' && (
           <Button
-            variant="outline"
-            className="flex-1 sm:flex-initial text-red-600 border-red-300 hover:bg-red-50"
+            className="flex-1 sm:flex-initial text-red-600 border border-red-300 bg-white hover:bg-red-50"
           >
             <XCircle className="mr-2 h-5 w-5" />
             Hủy báo cáo

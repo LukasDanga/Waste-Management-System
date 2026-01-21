@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { CitizenLayout } from './citizen/CitizenLayout';
-import { DashboardOverview } from './citizen/DashboardOverview';
-import { CreateReport } from './citizen/CreateReport';
-import { MyReports } from './citizen/MyReports';
-import { ReportDetail } from './citizen/ReportDetail';
-import { PointsRewards } from './citizen/PointsRewards';
-import { Leaderboard } from './citizen/Leaderboard';
-import { Feedback } from './citizen/Feedback';
-import { Profile } from './citizen/Profile';
+import { CitizenLayout } from './CitizenLayout';
+import { DashboardOverview } from './DashboardOverview/DashboardOverview';
+import { CreateReport } from './CreateReport/CreateReport';
+import { MyReports } from './MyReports/MyReports';
+import { ReportDetail } from './MyReports/ReportDetail';
+import { PointsRewards } from './PointsRewards/PointsRewards';
+import { Leaderboard } from './Leaderboard/Leaderboard';
+import { Feedback } from './Feedback/Feedback';
+import { Profile } from './Profile/Profile';
 
 interface CitizenDashboardProps {
   userData: {
