@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { ArrowLeft, MapPin, User, Calendar, Package, CheckCircle } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Button } from '../../ui/button';
+import { Card } from '../../ui/card';
+import { Badge } from '../../ui/badge';
+import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
 
 interface RequestDetailProps {
   onNavigate: (section: string) => void;
@@ -84,9 +84,8 @@ export function RequestDetail({ onNavigate, requestData }: RequestDetailProps) {
       {/* Header */}
       <div className="mb-6">
         <Button
-          variant="ghost"
           onClick={() => onNavigate('requests')}
-          className="mb-4"
+          className="mb-4 bg-transparent hover:bg-gray-100 text-gray-800"
         >
           <ArrowLeft className="mr-2 h-5 w-5" />
           Quay lại
@@ -219,9 +218,8 @@ export function RequestDetail({ onNavigate, requestData }: RequestDetailProps) {
                   Phân công
                 </Button>
                 <Button
-                  variant="outline"
                   onClick={handleReject}
-                  className="flex-1 text-red-600 border-red-300 hover:bg-red-50"
+                  className="flex-1 text-red-600 border border-red-300 bg-white hover:bg-red-50"
                 >
                   Từ chối yêu cầu
                 </Button>

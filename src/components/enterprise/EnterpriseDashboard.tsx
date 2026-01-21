@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { EnterpriseLayout } from './enterprise/EnterpriseLayout';
-import { DashboardOverview } from './enterprise/DashboardOverview';
-import { CollectionRequests } from './enterprise/CollectionRequests';
-import { RequestDetail } from './enterprise/RequestDetail';
-import { CollectorManagement } from './enterprise/CollectorManagement';
-import { CapacityManagement } from './enterprise/CapacityManagement';
-import { Analytics } from './enterprise/Analytics';
-import { PointRules } from './enterprise/PointRules';
-import { Profile } from './enterprise/Profile';
+import { EnterpriseLayout } from './EnterpriseLayout';
+import { DashboardOverview } from './DashboardOverview/DashboardOverview';
+import { CollectionRequests } from './CollectionRequests/CollectionRequests';
+import { RequestDetail } from './CollectionRequests/RequestDetail';
+import { CollectorManagement } from './CollectorManagement/CollectorManagement';
+import { CapacityManagement } from './CapacityManagement/CapacityManagement';
+import { Analytics } from './Analytics/Analytics';
+import { PointRules } from './PointRules/PointRules';
+import { Profile } from './Profile/Profile';
 
 interface EnterpriseDashboardProps {
   companyData: {

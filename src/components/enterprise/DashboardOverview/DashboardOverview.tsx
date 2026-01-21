@@ -1,6 +1,6 @@
 import { Inbox, Clock, CheckCircle, Package, Eye, Users, FileText } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
+import { Button } from '../../ui/button';
+import { Card } from '../../ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import {
   Select,
@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
+} from '../../ui/select';
 
 interface DashboardOverviewProps {
   onNavigate: (section: string) => void;
