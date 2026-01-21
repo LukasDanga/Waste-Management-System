@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { MapPin, Phone, Clock, Weight, ArrowLeft, Upload, Navigation } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-import { Input } from '../ui/input';
+import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
+import { Label } from '../../ui/label';
+import { Textarea } from '../../ui/textarea';
+import { Input } from '../../ui/input';
 
 interface TaskDetailProps {
   taskId: string;
@@ -190,7 +190,7 @@ export function TaskDetail({ taskId, onNavigate }: TaskDetailProps) {
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="font-semibold text-gray-900 mb-4">Cập nhật trạng thái</h2>
             
-            <RadioGroup value={currentStatus} onValueChange={(value) => setCurrentStatus(value as any)}>
+            <RadioGroup value={currentStatus} onValueChange={(value : any) => setCurrentStatus(value as any)}>
               <div className="space-y-3">
                 <div className="flex items-center space-x-3 p-3 rounded-lg border border-gray-200">
                   <RadioGroupItem value="assigned" id="assigned" />
