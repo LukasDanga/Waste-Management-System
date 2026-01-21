@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { CollectorLayout } from './CollectorLayout';
-import { DashboardOverview } from './DashboardOverview';
-import { MyTasks } from './MyTasks';
-import { TaskDetail } from './TaskDetail';
-import { WorkHistory } from './WorkHistory';
-import { PersonalStats } from './PersonalStats';
-import { Profile } from './Profile';
+import { DashboardOverview } from './DashboardOverview/DashboardOverview';
+import { MyTasks } from './MyTasks/MyTasks';
+import { TaskDetail } from './MyTasks/TaskDetail';
+import { WorkHistory } from './WorkHistory/WorkHistory';
+import { PersonalStats } from './PersonalStats/PersonalStats';
+import { Profile } from './Profile/Profile';
 
 interface CollectorDashboardProps {
   collectorData: {
