@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { X } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs';
+import { Filters, StatusOption } from '../../shared/Filters';
 import { QuickActions } from './QuickActions';
 import { TaskCard } from './TaskCard';
-import type { MyTasksProps, Task } from './types';
+import type { MyTasksProps, Task, TaskStatus } from './types';
 
 export function MyTasks({ onNavigate }: MyTasksProps) {
   const [activeTab, setActiveTab] = useState('pending');
   const [sortBy, setSortBy] = useState<'distance' | 'time'>('distance');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
 
   const pendingTasks: Task[] = [
     {
@@ -87,6 +91,32 @@ export function MyTasks({ onNavigate }: MyTasksProps) {
     },
   ];
 
+  const statusOptions: StatusOption[] = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'pending', label: '🟡 Chưa bắt đầu' },
+    { value: 'on-the-way', label: '🔵 Đang đến' },
+    { value: 'completed', label: '✅ Hoàn thành' },
+  ];
+
+  const filterTasks = (tasks: Task[]) =>
+    tasks.filter((task) => {
+      const matchesSearch =
+        !searchTerm ||
+        task.reportId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.address.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+  const filteredPending = useMemo(() => filterTasks(pendingTasks), [pendingTasks, searchTerm, statusFilter]);
+  const filteredOnTheWay = useMemo(() => filterTasks(onTheWayTasks), [onTheWayTasks, searchTerm, statusFilter]);
+  const filteredCompleted = useMemo(() => filterTasks(completedTasks), [completedTasks, searchTerm, statusFilter]);
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+  };
+
   return (
     <div className="p-8">
       {/* Header */}
@@ -101,23 +131,47 @@ export function MyTasks({ onNavigate }: MyTasksProps) {
         onViewMap={() => alert('Tính năng bản đồ sẽ sớm khả dụng')}
       />
 
+      <div className="mb-6">
+        <Filters
+          searchLabel="Tìm kiếm"
+          searchPlaceholder="Nhập mã báo cáo hoặc địa chỉ..."
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          statusLabel="Trạng thái"
+          statusValue={statusFilter}
+          statusOptions={statusOptions}
+          onStatusChange={(value) => setStatusFilter(value as TaskStatus | 'all')}
+          className="mb-2"
+        />
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <X className="w-4 h-4" />
+            Xóa bộ lọc
+          </button>
+        </div>
+      </div>
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="pending" className="flex items-center gap-2">
-            🟡 Chờ thực hiện ({pendingTasks.length})
+            🟡 Chờ thực hiện ({filteredPending.length})
           </TabsTrigger>
           <TabsTrigger value="on-the-way" className="flex items-center gap-2">
-            🔵 Đang đến ({onTheWayTasks.length})
+            🔵 Đang đến ({filteredOnTheWay.length})
           </TabsTrigger>
           <TabsTrigger value="completed" className="flex items-center gap-2">
-            ✅ Hoàn thành hôm nay ({completedTasks.length})
+            ✅ Hoàn thành hôm nay ({filteredCompleted.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending">
           <div className="space-y-4">
-            {pendingTasks.map((task) => (
+            {filteredPending.map((task) => (
               <TaskCard key={task.id} task={task} onNavigate={onNavigate} />
             ))}
           </div>
@@ -125,7 +179,7 @@ export function MyTasks({ onNavigate }: MyTasksProps) {
 
         <TabsContent value="on-the-way">
           <div className="space-y-4">
-            {onTheWayTasks.map((task) => (
+            {filteredOnTheWay.map((task) => (
               <TaskCard key={task.id} task={task} onNavigate={onNavigate} />
             ))}
           </div>
@@ -133,7 +187,7 @@ export function MyTasks({ onNavigate }: MyTasksProps) {
 
         <TabsContent value="completed">
           <div className="space-y-4">
-            {completedTasks.map((task) => (
+            {filteredCompleted.map((task) => (
               <TaskCard key={task.id} task={task} onNavigate={onNavigate} />
             ))}
           </div>

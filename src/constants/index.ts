@@ -6,17 +6,17 @@
 // ==================== USER ROLES ====================
 
 export const USER_ROLES = {
-  CITIZEN: 'citizen',
-  ENTERPRISE: 'enterprise',
-  COLLECTOR: 'collector',
-  ADMIN: 'admin',
+  CITIZEN: 'CITIZEN',
+  ENTERPRISE: 'ENTERPRISE',
+  COLLECTOR: 'COLLECTOR',
+  SUPER_ADMIN: 'SUPER_ADMIN',
 } as const;
 
 export const ROLE_LABELS = {
-  citizen: 'Người dân',
-  enterprise: 'Doanh nghiệp',
-  collector: 'Nhân viên thu gom',
-  admin: 'Quản trị viên',
+  CITIZEN: 'Người dân',
+  ENTERPRISE: 'Doanh nghiệp',
+  COLLECTOR: 'Nhân viên thu gom',
+  SUPER_ADMIN: 'Quản trị viên cấp cao',
 } as const;
 
 // ==================== STATUS ====================
@@ -344,22 +344,22 @@ export const DEMO_ACCOUNTS = {
   CITIZEN: {
     username: 'citizen_demo',
     password: 'citizen123',
-    role: 'citizen',
+    role: USER_ROLES.CITIZEN,
   },
   ENTERPRISE: {
     username: 'enterprise_demo',
     password: 'enterprise123',
-    role: 'enterprise',
+    role: USER_ROLES.ENTERPRISE,
   },
   COLLECTOR: {
     username: 'collector_demo',
     password: 'collector123',
-    role: 'collector',
+    role: USER_ROLES.COLLECTOR,
   },
-  ADMIN: {
-    username: 'admin_demo',
-    password: 'admin123',
-    role: 'admin',
+  SUPER_ADMIN: {
+    username: 'longdong32120@gmail.com',
+    password: '280120051',
+    role: USER_ROLES.SUPER_ADMIN,
   },
 } as const;
 
@@ -414,12 +414,15 @@ export const FEATURE_FLAGS = {
 
 // ==================== APP CONFIG ====================
 
+const viteApiBase = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_API_BASE_URL : undefined;
+const browserEnvApiBase = typeof window !== 'undefined' ? (window as any).ENV?.API_BASE_URL : undefined;
+const rawBaseUrl = viteApiBase || browserEnvApiBase || 'http://localhost:3000';
+const normalizedBaseUrl = rawBaseUrl.replace(/\/+$/, '');
+
 export const APP_CONFIG = {
   APP_NAME: 'EcoWaste',
   APP_VERSION: '1.0.0',
-  API_BASE_URL: typeof window !== 'undefined' && (window as any).ENV?.API_BASE_URL 
-    ? (window as any).ENV.API_BASE_URL 
-    : 'http://localhost:3000',
+  API_BASE_URL: normalizedBaseUrl,
   API_TIMEOUT: 30000, // 30 seconds
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000, // 1 second
