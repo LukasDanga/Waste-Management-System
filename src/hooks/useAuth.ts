@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { authService } from '../services/api.service';
+import { authService } from '../services/IAMService/api.service';
 import { STORAGE_KEYS, DEMO_ACCOUNTS } from '../constants';
 import { getLocalStorage, setLocalStorage, removeLocalStorage } from '../utils/helpers';
 import type { User, UserRole } from '../types';
@@ -51,25 +51,25 @@ export const useAuth = () => {
   }, []);
 
   // Login function
-  const login = useCallback(async (username: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, roleCode: UserRole = 'CITIZEN') => {
     setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
       // Check if it's a demo account
       const isDemoAccount = Object.values(DEMO_ACCOUNTS).some(
-        (account) => account.username === username && account.password === password
+        (account) => account.username === email && account.password === password
       );
 
       if (isDemoAccount) {
         // Mock login for demo accounts
         const demoAccount = Object.values(DEMO_ACCOUNTS).find(
-          (account) => account.username === username
+          (account) => account.username === email
         );
 
         const mockUser: User = {
           id: `demo-${demoAccount?.role}`,
-          username: username,
-          email: `${username}@ecowaste.vn`,
+          username: email,
+          email,
           name: getDemoUserName(demoAccount?.role as UserRole),
           role: demoAccount?.role as UserRole,
           createdAt: new Date().toISOString(),
@@ -93,12 +93,25 @@ export const useAuth = () => {
       }
 
       // Real API login (when backend is ready)
-      const response = await authService.login({ username, password });
+      const response = await authService.login({ email, password, roleCode });
 
       if (response.success && response.data) {
-        const { user, token } = response.data;
+        const { accessToken, refreshToken } = response.data as { accessToken: string; refreshToken?: string };
 
-        setLocalStorage(STORAGE_KEYS.ACCESS_TOKEN, token);
+        const decoded = decodeToken(accessToken);
+        const user: User = {
+          id: decoded.id || `user-${Date.now()}`,
+          username: decoded.email || email,
+          email: decoded.email || email,
+          name: decoded.name || decoded.email || email,
+          role: (decoded.role || roleCode) as UserRole,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: 'active',
+        };
+
+        setLocalStorage(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+        if (refreshToken) setLocalStorage(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
         setLocalStorage(STORAGE_KEYS.USER_DATA, user);
 
         setAuthState({
@@ -227,11 +240,29 @@ export const useAuth = () => {
 // Helper function to get demo user name
 const getDemoUserName = (role: UserRole): string => {
   const nameMap: Record<UserRole, string> = {
-    citizen: 'Nguyễn Văn A',
-    enterprise: 'Green Recycle Co., Ltd',
-    collector: 'Nguyễn Văn B',
-    admin: 'Quản Trị Viên',
+    CITIZEN: 'Nguyễn Văn A',
+    ENTERPRISE: 'Green Recycle Co., Ltd',
+    COLLECTOR: 'Nguyễn Văn B',
+    SUPER_ADMIN: 'Quản trị viên cấp cao',
   };
 
   return nameMap[role] || 'Demo User';
+};
+
+const decodeToken = (token: string): { id?: string; email?: string; name?: string; role?: string } => {
+  try {
+    const payload = token.split('.')[1];
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = JSON.parse(atob(normalized));
+
+    return {
+      id: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || decoded.sub,
+      email: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || decoded.email,
+      name: decoded['FullName'] || decoded.name,
+      role: decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decoded.role,
+    };
+  } catch (error) {
+    console.error('Failed to decode token', error);
+    return {};
+  }
 };

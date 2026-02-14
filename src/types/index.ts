@@ -5,7 +5,7 @@
 
 // ==================== USER TYPES ====================
 
-export type UserRole = 'citizen' | 'enterprise' | 'collector' | 'admin';
+export type UserRole = 'CITIZEN' | 'ENTERPRISE' | 'COLLECTOR' | 'SUPER_ADMIN';
 
 export interface User {
   id: string;
@@ -21,7 +21,7 @@ export interface User {
 }
 
 export interface Citizen extends User {
-  role: 'citizen';
+  role: 'CITIZEN';
   points: number;
   totalReports: number;
   area: string;
@@ -31,7 +31,7 @@ export interface Citizen extends User {
 }
 
 export interface Enterprise extends User {
-  role: 'enterprise';
+  role: 'ENTERPRISE';
   companyName: string;
   license: string;
   areas: string[];
@@ -48,7 +48,7 @@ export interface Enterprise extends User {
 }
 
 export interface Collector extends User {
-  role: 'collector';
+  role: 'COLLECTOR';
   enterpriseId: string;
   enterpriseName: string;
   vehicle: string;
@@ -64,7 +64,7 @@ export interface Collector extends User {
 }
 
 export interface Admin extends User {
-  role: 'admin';
+  role: 'SUPER_ADMIN';
   permissions: string[];
   department?: string;
 }

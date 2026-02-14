@@ -3,8 +3,8 @@
  * Centralized API service with interceptors and error handling
  */
 
-import { API_ENDPOINTS, APP_CONFIG, STORAGE_KEYS, ERROR_MESSAGES } from '../constants';
-import type { ApiResponse, ApiError } from '../types';
+import { API_ENDPOINTS, APP_CONFIG, STORAGE_KEYS, ERROR_MESSAGES } from '../../constants';
+import type { ApiResponse, ApiError } from '../../types';
 
 // ==================== API CLIENT ====================
 
@@ -83,9 +83,12 @@ class ApiClient {
       throw error;
     }
 
+    // Prefer `payload` (IAM API) then `data` (other APIs)
+    const payload = data?.payload ?? data?.data ?? data;
+
     return {
       success: true,
-      data: data?.data || data,
+      data: payload,
       message: data?.message,
     };
   }
@@ -240,8 +243,8 @@ export const apiClient = new ApiClient();
 // ==================== AUTH SERVICE ====================
 
 export const authService = {
-  async login(credentials: { username: string; password: string }) {
-    return apiClient.post(API_ENDPOINTS.LOGIN, credentials);
+  async login(credentials: { email: string; password: string; roleCode: string }) {
+    return apiClient.post('/iam/auth/login', credentials);
   },
 
   async register(data: any) {
