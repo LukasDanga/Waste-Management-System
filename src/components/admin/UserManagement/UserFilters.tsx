@@ -11,16 +11,15 @@ export function UserFilters({ searchQuery, onSearchChange, statusFilter, onStatu
   return (
     <Filters
       searchLabel="Tìm kiếm"
-      searchPlaceholder="Tìm theo tên, email, số điện thoại..."
+      searchPlaceholder="Tìm theo họ tên hoặc email..."
       searchValue={searchQuery}
       onSearchChange={onSearchChange}
       statusLabel="Trạng thái"
       statusValue={statusFilter}
       statusOptions={[
         { value: 'all', label: 'Tất cả' },
-        { value: 'active', label: 'Hoạt động' },
-        { value: 'suspended', label: 'Tạm khóa' },
-        { value: 'deleted', label: 'Đã xóa' },
+        { value: 'active', label: 'Đang hoạt động' },
+        { value: 'inactive', label: 'Ngưng hoạt động' },
       ]}
       onStatusChange={onStatusChange}
     />

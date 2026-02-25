@@ -1,19 +1,10 @@
 export interface User {
-  id: string;
-  name: string;
+  userID: string;
+  fullName: string;
   email: string;
-  phone?: string;
-  address?: string;
-  role: string;
-  status: 'active' | 'suspended' | 'deleted';
-  createdAt: string;
-}
-
-export interface UserFormData {
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  role: string;
-  password: string;
+  gender: string;
+  age: number;
+  dob: string;
+  isActive: boolean;
+  createdBy?: string;
 }

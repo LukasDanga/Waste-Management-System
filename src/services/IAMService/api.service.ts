@@ -20,7 +20,8 @@ class ApiClient {
   // Get auth token from storage
   private getAuthToken(): string | null {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    const raw = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    return raw ? raw.replace(/^"|"$/g, '') : null;
   }
 
   // Set auth token to storage
@@ -300,6 +301,11 @@ export const userService = {
   async getUsers(params?: any) {
     const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
     return apiClient.get(`${API_ENDPOINTS.USERS}${queryString}`);
+  },
+
+  // IAM user list (sorted by identity)
+  async getIamUsers(sortBy: string = 'SORT_BY_IDENTITY') {
+    return apiClient.get(`/iam/user?sortBy=${encodeURIComponent(sortBy)}`);
   },
 };
 
