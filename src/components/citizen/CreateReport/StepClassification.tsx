@@ -1,17 +1,23 @@
-import { ChevronRight } from 'lucide-react';
+import { CheckCircle, ChevronRight } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
-import type { AiClassification } from './types';
+
+interface WasteTypeOption {
+  value: string;
+  label: string;
+  color: string;
+}
 
 interface StepClassificationProps {
   imagePreview: string | null;
-  aiClassification: AiClassification;
-  onConfirmChange: (confirmed: boolean) => void;
+  wasteTypes: WasteTypeOption[];
+  selectedWasteType: string;
+  onSelect: (value: string) => void;
   onBack: () => void;
   onNext: () => void;
 }
 
-export function StepClassification({ imagePreview, aiClassification, onConfirmChange, onBack, onNext }: StepClassificationProps) {
+export function StepClassification({ imagePreview, wasteTypes, selectedWasteType, onSelect, onBack, onNext }: StepClassificationProps) {
   return (
     <Card className="p-8">
       <div className="space-y-6">
@@ -19,42 +25,30 @@ export function StepClassification({ imagePreview, aiClassification, onConfirmCh
 
         <Card className="p-6 bg-blue-50 border-blue-200">
           <div className="flex items-start gap-4">
-            <div className="text-4xl">🤖</div>
+            <div className="text-4xl">🗂️</div>
             <div className="flex-1">
-              <h3 className="font-semibold text-lg mb-4">AI Gợi ý phân loại</h3>
+              <h3 className="font-semibold text-lg mb-4">Chọn loại rác phù hợp</h3>
 
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium">Kết quả:</span>
-                  <span className="text-lg font-bold text-blue-600">{aiClassification.type}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">Độ tin cậy:</span>
-                  <span className="text-lg font-bold text-green-600">{aiClassification.confidence}%</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="classification"
-                    checked={aiClassification.confirmed}
-                    onChange={() => onConfirmChange(true)}
-                    className="w-4 h-4 text-green-600"
-                  />
-                  <span>✓ Xác nhận đúng</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="classification"
-                    checked={!aiClassification.confirmed}
-                    onChange={() => onConfirmChange(false)}
-                    className="w-4 h-4 text-green-600"
-                  />
-                  <span>○ Chọn loại khác</span>
-                </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {wasteTypes.map((type) => {
+                  const isActive = type.value === selectedWasteType;
+                  return (
+                    <button
+                      key={type.value}
+                      type="button"
+                      onClick={() => onSelect(type.value)}
+                      className={`flex items-center justify-between rounded-lg border p-4 text-left transition-colors ${
+                        isActive ? 'border-green-600 bg-white shadow-sm' : 'border-gray-200 bg-white hover:border-green-300'
+                      }`}
+                    >
+                      <div>
+                        <div className={`font-semibold ${type.color}`}>{type.label}</div>
+                        <div className="text-sm text-gray-500">Nhấn để xác nhận loại rác</div>
+                      </div>
+                      {isActive && <CheckCircle className="h-5 w-5 text-green-600" />}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -26,13 +26,13 @@ export function ProgressSteps({ step }: ProgressStepsProps) {
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">
           {step === 1 && 'Chụp/Tải ảnh'}
-          {step === 2 && 'AI Phân loại'}
-          {step === 3 && 'Thông tin chi tiết'}
+          {step === 2 && 'Chọn loại rác'}
+          {step === 3 && 'Thông tin vị trí'}
         </h2>
         <p className="text-gray-600">
           {step === 1 && 'Tải lên hình ảnh rác cần thu gom'}
-          {step === 2 && 'Xác nhận loại rác được AI phân tích'}
-          {step === 3 && 'Điền thông tin chi tiết về rác'}
+          {step === 2 && 'Chọn loại rác theo hình ảnh'}
+          {step === 3 && 'Nhập mô tả và tọa độ GPS'}
         </p>
       </div>
     </div>
