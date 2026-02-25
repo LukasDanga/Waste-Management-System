@@ -4,35 +4,23 @@ import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { Slider } from '../../ui/slider';
 import { Textarea } from '../../ui/textarea';
 import type { ReportFormData } from './types';
-
-interface WasteTypeOption {
-  value: string;
-  label: string;
-  color: string;
-}
 
 interface StepDetailsProps {
   formData: ReportFormData;
   onChange: (data: Partial<ReportFormData>) => void;
-  wasteTypes: WasteTypeOption[];
   onBack: () => void;
-  onSaveDraft: () => void;
   onSubmit: () => void;
+  submitting?: boolean;
 }
 
-export function StepDetails({ formData, onChange, wasteTypes, onBack, onSaveDraft, onSubmit }: StepDetailsProps) {
+export function StepDetails({ formData, onChange, onBack, onSubmit, submitting }: StepDetailsProps) {
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState('');
-
-  const getWeightLabel = (value: number) => {
-    if (value < 33) return 'Nhỏ (<5kg)';
-    if (value < 67) return 'Trung bình (5-20kg)';
-    return 'Lớn (>20kg)';
-  };
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressError, setAddressError] = useState('');
+  const [addressResult, setAddressResult] = useState('');
 
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -44,21 +32,12 @@ export function StepDetails({ formData, onChange, wasteTypes, onBack, onSaveDraf
     setGeoLoading(true);
 
     navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        try {
-          const { latitude, longitude } = coords;
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
-          );
-          const data = await res.json();
-          const address = data?.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-          setGeoError('');
-          onChange({ location: address });
-        } catch (error) {
-          setGeoError('Không thể lấy địa chỉ, thử lại.');
-        } finally {
-          setGeoLoading(false);
-        }
+      ({ coords }) => {
+        const { latitude, longitude } = coords;
+        onChange({ latitude: Number(latitude.toFixed(6)), longitude: Number(longitude.toFixed(6)) });
+        setAddressResult('');
+        setGeoError('');
+        setGeoLoading(false);
       },
       (err) => {
         setGeoError(err.message || 'Không thể lấy vị trí.');
@@ -72,52 +51,6 @@ export function StepDetails({ formData, onChange, wasteTypes, onBack, onSaveDraf
     <Card className="p-8">
       <div className="space-y-6">
         <div className="space-y-2">
-          <Label>Loại rác *</Label>
-          <Select value={formData.wasteType} onValueChange={(value : any) => onChange({ wasteType: value })}>
-            <SelectTrigger className="bg-input-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {wasteTypes.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  <span className={type.color}>{type.label}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Vị trí *</Label>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              value={formData.location}
-              onChange={(e) => {
-                setGeoError('');
-                onChange({ location: e.target.value });
-              }}
-              className="pl-10 bg-input-background"
-              placeholder="Nhập địa chỉ"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              onClick={handleGetCurrentLocation}
-              disabled={geoLoading}
-              className="bg-green-600 hover:bg-green-700 disabled:opacity-60"
-            >
-              {geoLoading ? 'Đang lấy vị trí...' : 'Lấy vị trí hiện tại'}
-            </Button>
-            {geoError && <span className="text-sm text-red-600">{geoError}</span>}
-          </div>
-          <div className="h-32 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500">
-            🗺️ Bản đồ (GPS auto-detect)
-          </div>
-        </div>
-
-        <div className="space-y-2">
           <Label>Mô tả *</Label>
           <Textarea
             value={formData.description}
@@ -129,17 +62,109 @@ export function StepDetails({ formData, onChange, wasteTypes, onBack, onSaveDraf
           <div className="text-xs text-gray-500 text-right">{formData.description.length}/500</div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Khối lượng ước tính</Label>
-          <div className="pt-2 pb-4">
-            <Slider
-              value={[formData.weight]}
-              onValueChange={(value : any) => onChange({ weight: value[0] })}
-              max={100}
-              step={1}
-              className="mb-2"
-            />
-            <div className="text-center font-semibold text-green-600">{getWeightLabel(formData.weight)}</div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Vĩ độ (latitude) *</Label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="number"
+                step="0.000001"
+                value={formData.latitude ?? ''}
+                onChange={(e) => {
+                  setGeoError('');
+                  setAddressError('');
+                  setAddressResult('');
+                  onChange({ latitude: e.target.value === '' ? null : Number(e.target.value) });
+                }}
+                className="pl-10 bg-input-background"
+                placeholder="16.450000"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Kinh độ (longitude) *</Label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="number"
+                step="0.000001"
+                value={formData.longitude ?? ''}
+                onChange={(e) => {
+                  setGeoError('');
+                  setAddressError('');
+                  setAddressResult('');
+                  onChange({ longitude: e.target.value === '' ? null : Number(e.target.value) });
+                }}
+                className="pl-10 bg-input-background"
+                placeholder="107.550000"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            onClick={handleGetCurrentLocation}
+            disabled={geoLoading}
+            className="bg-green-600 hover:bg-green-700 disabled:opacity-60"
+          >
+            {geoLoading ? 'Đang lấy tọa độ...' : 'Lấy tọa độ hiện tại'}
+          </Button>
+          <Button
+            type="button"
+            onClick={async () => {
+              if (formData.latitude == null || formData.longitude == null) {
+                setAddressError('Vui lòng nhập đủ tọa độ.');
+                return;
+              }
+
+              setGeoError('');
+              setAddressError('');
+              setAddressResult('');
+              setAddressLoading(true);
+
+              try {
+                const res = await fetch(
+                  `https://geocode.maps.co/reverse?lat=${formData.latitude}&lon=${formData.longitude}&api_key=699d00d8ad6a6903279315xyoa5f1ca`
+                );
+                if (!res.ok) {
+                  throw new Error('Không thể tra cứu địa chỉ.');
+                }
+                const data = await res.json();
+                const name = data?.display_name || 'Không tìm thấy địa chỉ.';
+                setGeoError('');
+                setAddressResult(name);
+              } catch (error) {
+                setAddressError(error instanceof Error ? error.message : 'Lỗi tra cứu địa chỉ.');
+              } finally {
+                setAddressLoading(false);
+              }
+            }}
+            disabled={addressLoading}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
+          >
+            {addressLoading ? 'Đang tra cứu...' : 'Tra cứu địa chỉ'}
+          </Button>
+          {geoError && <span className="text-sm text-red-600">{geoError}</span>}
+          {addressError && <span className="text-sm text-red-600">{addressError}</span>}
+        </div>
+
+        {(addressResult || addressLoading) && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800">
+            <div className="font-semibold mb-1">Địa chỉ tương ứng</div>
+            <div className="text-gray-700">
+              {addressLoading ? 'Đang lấy địa chỉ...' : addressResult || 'Chưa có địa chỉ'}
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+          <div className="font-semibold text-gray-800 mb-2">Thông tin hình ảnh</div>
+          <div className="flex items-center justify-between">
+            <span>Tên file:</span>
+            <span className="font-medium">{formData.imageName || 'Chưa chọn file'}</span>
           </div>
         </div>
 
@@ -147,11 +172,8 @@ export function StepDetails({ formData, onChange, wasteTypes, onBack, onSaveDraf
           <Button onClick={onBack} className="flex-1 border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-100">
             Quay lại
           </Button>
-          <Button onClick={onSaveDraft} className="flex-1 border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-100">
-            Lưu nháp
-          </Button>
-          <Button onClick={onSubmit} className="flex-1 bg-green-600 hover:bg-green-700">
-            Gửi báo cáo
+          <Button onClick={onSubmit} disabled={submitting} className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-60">
+            {submitting ? 'Đang gửi...' : 'Gửi báo cáo'}
           </Button>
         </div>
       </div>

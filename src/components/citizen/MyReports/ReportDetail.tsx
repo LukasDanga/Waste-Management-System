@@ -199,7 +199,7 @@ export function ReportDetail({ onNavigate, reportData }: ReportDetailProps) {
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
         <Button
-          className="flex-1 sm:flex-initial border border-gray-300 bg-white hover:bg-gray-50"
+          className="flex-1 sm:flex-initial border border-gray-300 bg-white hover:bg-gray-50 text-black"
           onClick={() => onNavigate('feedback')}
         >
           <MessageSquare className="mr-2 h-5 w-5" />

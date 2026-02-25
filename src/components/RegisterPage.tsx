@@ -7,6 +7,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from '../hooks/useToast';
 import type { UserRole } from '../types';
+import { registerCitizen } from '../services/citizenService';
 
 interface RegisterPageProps {
 	onRegister: (data: any) => void;
@@ -27,6 +28,7 @@ export function RegisterPage({ onRegister, onBackToLogin }: RegisterPageProps) {
 	const [selectedRole, setSelectedRole] = useState<RegisterRole>(null);
 	const [showPassword, setShowPassword] = useState(false);
 	const { success: toastSuccess, error: toastError } = useToast();
+	const [submitting, setSubmitting] = useState(false);
   
 	// Common fields for all roles
 	const [email, setEmail] = useState('');
@@ -89,10 +91,9 @@ export function RegisterPage({ onRegister, onBackToLogin }: RegisterPageProps) {
 		setContactInfo('');
 	};
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
-		// Validation
 		if (!email || !fullName || !gender || !dob || !password) {
 			toastError('Vui lòng điền đầy đủ thông tin bắt buộc');
 			return;
@@ -108,6 +109,46 @@ export function RegisterPage({ onRegister, onBackToLogin }: RegisterPageProps) {
 			return;
 		}
 
+		if (!selectedRole) {
+			toastError('Vui lòng chọn loại tài khoản');
+			return;
+		}
+
+		if (selectedRole === 'CITIZEN') {
+			if (!displayName) {
+				toastError('Vui lòng nhập tên hiển thị');
+				return;
+			}
+
+			const payload = {
+				email,
+				fullName,
+				gender,
+				dob: `${dob}T00:00:00`,
+				password,
+				displayName,
+				avatarName: 'default_avatar',
+			};
+
+			try {
+				setSubmitting(true);
+				await registerCitizen(payload);
+				toastSuccess('Đăng ký thành công! Vui lòng đăng nhập.');
+				onRegister(payload);
+			} catch (err) {
+				toastError(err instanceof Error ? err.message : 'Đăng ký thất bại');
+			} finally {
+				setSubmitting(false);
+			}
+			return;
+		}
+
+		// Keep previous local handling for other roles (collector/enterprise)
+		if (selectedRole === 'COLLECTOR' && !displayName) {
+			toastError('Vui lòng nhập tên hiển thị');
+			return;
+		}
+
 		let registerData: any = {
 			email,
 			fullName,
@@ -118,10 +159,6 @@ export function RegisterPage({ onRegister, onBackToLogin }: RegisterPageProps) {
 		};
 
 		if (selectedRole === 'CITIZEN' || selectedRole === 'COLLECTOR') {
-			if (!displayName) {
-				toastError('Vui lòng nhập tên hiển thị');
-				return;
-			}
 			registerData.displayName = displayName;
 			registerData.avatarName = 'default_avatar';
 		}
@@ -237,14 +274,13 @@ export function RegisterPage({ onRegister, onBackToLogin }: RegisterPageProps) {
 											</div>
 										</div>
 									</div>
-									<Button
+									<button
 										type="button"
-										variant="ghost"
-										size="sm"
 										onClick={() => setSelectedRole(null)}
+										className="text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-1 rounded transition-colors"
 									>
 										Đổi loại
-									</Button>
+									</button>
 								</div>
 
 								{/* Common Fields */}
@@ -425,18 +461,17 @@ export function RegisterPage({ onRegister, onBackToLogin }: RegisterPageProps) {
 								<div className="flex gap-3 pt-4">
 									<Button
 										type="button"
-										variant="outline"
 										onClick={() => setSelectedRole(null)}
-										className="w-1/3"
+										className="w-1/3 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
 									>
 										Quay lại
 									</Button>
 									<Button
 										type="submit"
-										className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-										size="lg"
+										disabled={submitting}
+										className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 disabled:opacity-60"
 									>
-										Đăng ký
+										{submitting ? 'Đang đăng ký...' : 'Đăng ký'}
 									</Button>
 								</div>
 							</form>

@@ -3,8 +3,12 @@
  * API endpoints and configuration settings
  */
 
-// Helper to safely access environment variables
+// Helper to safely access environment variables (Vite + window ENV fallback)
 const getEnv = (key: string, defaultValue: string = ''): string => {
+  if (typeof import.meta !== 'undefined' && (import.meta as any)?.env) {
+    const val = (import.meta as any).env[key];
+    if (val) return val;
+  }
   if (typeof window !== 'undefined') {
     return (window as any).ENV?.[key] || defaultValue;
   }
@@ -13,7 +17,7 @@ const getEnv = (key: string, defaultValue: string = ''): string => {
 
 export const API_CONFIG = {
   // Base URL
-  BASE_URL: getEnv('API_BASE_URL', 'http://localhost:3000/api'),
+  BASE_URL: getEnv('VITE_API_BASE_URL', getEnv('API_BASE_URL', 'http://localhost:3000/api')),
   
   // Timeout
   TIMEOUT: Number(getEnv('API_TIMEOUT', '30000')) || 30000,
