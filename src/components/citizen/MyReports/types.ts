@@ -1,17 +1,9 @@
-export interface ReportItem {
-  id: string;
-  location: string;
-  type: 'organic' | 'recyclable' | 'hazardous' | 'general';
-  typeLabel: string;
-  status: 'pending' | 'accepted' | 'assigned' | 'collected';
-  statusLabel: string;
-  points: string;
-  date: string;
-  image: string;
-}
+import type { CitizenReportItem } from '../../../services/citizenService';
 
-export interface ReportFilters {
-  status: string;
-  type: string;
-  time: string;
+export type TabKey = 'collectionReports' | 'complaintReports' | 'rewardHistories';
+
+export interface CitizenProfileData {
+  collectionReports: CitizenReportItem[];
+  complaintReports: any[];
+  rewardHistories: any[];
 }
