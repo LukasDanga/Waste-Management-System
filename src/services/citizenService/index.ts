@@ -23,8 +23,24 @@ export interface WasteTypeItem {
   description: string;
 }
 
+export interface CitizenReportItem {
+  collectionReportID: string;
+  wasteType: string;
+  description: string;
+  gps: {
+    latitude: number;
+    longitude: number;
+  };
+  regionCode: string;
+  imageName: string;
+  status: number;
+  reportAt: string;
+  citizenProfileID: string;
+  citizenName?: string;
+}
+
 const getAuthHeaders = (): Record<string, string> => {
-  const rawToken = localStorage.getItem('ecowaste_access_token') || localStorage.getItem('token');
+  const rawToken = localStorage.getItem('ecowaste_access_token');
   const token = rawToken ? rawToken.replace(/^"|"$/g, '') : '';
   const headers: Record<string, string> = {};
   if (token) {
@@ -88,6 +104,39 @@ export async function fetchWasteTypes(): Promise<WasteTypeItem[]> {
     type: item?.type || item?.code || '',
     description: item?.description || item?.name || '',
   })).filter((i) => i.type);
+}
+
+export async function fetchCitizenReports(params?: { regionCode?: string; wasteType?: string; description?: string; }) {
+  const query = new URLSearchParams();
+  if (params?.regionCode) query.set('RegionCode', params.regionCode);
+  if (params?.wasteType) query.set('WasteType', params.wasteType);
+  if (params?.description) query.set('Description', params.description);
+
+  const url = `${API_CONFIG.BASE_URL}/citizen/citizens/collection-report${query.toString() ? `?${query.toString()}` : ''}`;
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    let message = 'Không tải được danh sách báo cáo';
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  const data = await res.json();
+  const list = data?.payload || data?.data || data;
+  if (!Array.isArray(list)) return [] as CitizenReportItem[];
+  return list as CitizenReportItem[];
 }
 
 export async function uploadReportImage(file: File) {
