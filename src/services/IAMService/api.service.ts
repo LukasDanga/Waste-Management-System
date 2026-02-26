@@ -68,8 +68,8 @@ class ApiClient {
     if (!response.ok) {
       // Handle 401 Unauthorized
       if (response.status === 401) {
+        // Clear tokens but avoid forced navigation so calling screens can handle toast/UI
         this.removeAuthToken();
-        window.location.href = '/login';
         throw new Error(ERROR_MESSAGES.SESSION_EXPIRED);
       }
 

@@ -22,6 +22,7 @@ export function CreateReport({ onNavigate }: CreateReportProps) {
   const [step, setStep] = useState(1);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
   const [wasteTypes, setWasteTypes] = useState<WasteOption[]>([]);
   const [loadingTypes, setLoadingTypes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -63,6 +64,7 @@ export function CreateReport({ onNavigate }: CreateReportProps) {
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
+      setImageUrl('');
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -73,22 +75,38 @@ export function CreateReport({ onNavigate }: CreateReportProps) {
     }
   };
 
+  const handleUseImageUrl = () => {
+    if (!imageUrl.trim()) {
+      toastError('Vui lòng nhập URL ảnh');
+      return;
+    }
+    setImageFile(null);
+    setImagePreview(imageUrl.trim());
+    setFormData((prev) => ({ ...prev, imageName: imageUrl.trim() }));
+    setStep(2);
+  };
+
   const handleSubmit = async () => {
     if (!formData.description || formData.latitude == null || formData.longitude == null) {
       toastError('Vui lòng nhập mô tả và tọa độ');
       return;
     }
     if (!imageFile && !formData.imageName) {
-      toastError('Vui lòng tải lên hình ảnh');
+      toastError('Vui lòng tải lên hoặc nhập URL hình ảnh');
       return;
     }
 
     setSubmitting(true);
     try {
       let imageName = formData.imageName;
-      if (!imageName && imageFile) {
+      if (imageFile) {
         imageName = await uploadReportImage(imageFile);
         setFormData((prev) => ({ ...prev, imageName }));
+      }
+      if (!imageName) {
+        toastError('Vui lòng cung cấp hình ảnh hợp lệ');
+        setSubmitting(false);
+        return;
       }
 
       const payload = {
@@ -117,9 +135,13 @@ export function CreateReport({ onNavigate }: CreateReportProps) {
         <StepImageUpload
           imagePreview={imagePreview}
           onUpload={handleImageUpload}
+          imageUrl={imageUrl}
+          onImageUrlChange={setImageUrl}
+          onUseImageUrl={handleUseImageUrl}
           onRemove={() => {
             setImagePreview(null);
             setImageFile(null);
+            setImageUrl('');
             setFormData({ ...formData, imageName: '' });
             setStep(1);
           }}

@@ -10,6 +10,19 @@ export interface RegisterCitizenRequest {
   avatarName: string;
 }
 
+export interface RegisterEnterpriseRequest {
+  email: string;
+  fullName: string;
+  gender: string;
+  dob: string; // ISO date string
+  password: string;
+  name: string;
+  tin: string;
+  avatarName: string;
+  address: string;
+  contactInfo: string;
+}
+
 export interface CreateReportRequest {
   wasteType: string;
   description: string;
@@ -39,6 +52,19 @@ export interface CitizenReportItem {
   citizenName?: string;
 }
 
+export interface CitizenProfileResponse {
+  collectionReports: CitizenReportItem[];
+  complaintReports: any[];
+  rewardHistories: any[];
+}
+
+export interface ComplaintReportRequest {
+  collectionReportID: string;
+  title: string;
+  description: string;
+  imageName: string;
+}
+
 const getAuthHeaders = (): Record<string, string> => {
   const rawToken = localStorage.getItem('ecowaste_access_token');
   const token = rawToken ? rawToken.replace(/^"|"$/g, '') : '';
@@ -51,6 +77,34 @@ const getAuthHeaders = (): Record<string, string> => {
 
 export async function registerCitizen(payload: RegisterCitizenRequest) {
   const res = await fetch(`${API_CONFIG.BASE_URL}/citizen/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    let message = 'Đăng ký thất bại';
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function registerEnterprise(payload: RegisterEnterpriseRequest) {
+  const res = await fetch(`${API_CONFIG.BASE_URL}/enterprise/auth/register`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -139,27 +193,81 @@ export async function fetchCitizenReports(params?: { regionCode?: string; wasteT
   return list as CitizenReportItem[];
 }
 
-export async function uploadReportImage(file: File) {
-  const formData = new FormData();
-  formData.append('image', file);
-
-  const res = await fetch(`${API_CONFIG.BASE_URL}/media/image/images`, {
-    method: 'POST',
+export async function fetchCitizenProfile(): Promise<CitizenProfileResponse> {
+  const res = await fetch(`${API_CONFIG.BASE_URL}/citizen/citizens/my-profile`, {
+    method: 'GET',
     headers: {
+      Accept: 'application/json',
       ...getAuthHeaders(),
     },
-    body: formData,
   });
 
   if (!res.ok) {
-    throw new Error('Tải ảnh lên thất bại');
+    let message = 'Không tải được thông tin người dùng';
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
   }
 
   const data = await res.json();
-  // Expecting API to return { payload: { name: string } } or similar
-  const name = data?.payload?.name || data?.payload || data?.name;
-  if (!name) throw new Error('Không nhận được tên ảnh');
-  return String(name);
+  const payload = data?.payload || data?.data || data;
+  return {
+    collectionReports: Array.isArray(payload?.collectionReports) ? payload.collectionReports : [],
+    complaintReports: Array.isArray(payload?.complaintReports) ? payload.complaintReports : [],
+    rewardHistories: Array.isArray(payload?.rewardHistories) ? payload.rewardHistories : [],
+  };
+}
+
+export async function uploadReportImage(file: File, purpose = 'CollectionReport') {
+  const fieldCandidates = ['file', 'image', 'images', 'fileUpload'];
+  let lastError = 'Tải ảnh lên thất bại';
+
+  for (const field of fieldCandidates) {
+    const formData = new FormData();
+    formData.append(field, file);
+    formData.append('purpose', purpose);
+
+    try {
+      const res = await fetch(`${API_CONFIG.BASE_URL}/media/image/images`, {
+        method: 'POST',
+        headers: {
+          ...getAuthHeaders(),
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        try {
+          const body = await res.json();
+          lastError = `${field}: ${body?.message || body?.error || `${res.status} ${res.statusText}`}`;
+        } catch {
+          try {
+            const text = await res.text();
+            lastError = `${field}: ${text || `${res.status} ${res.statusText}`}`;
+          } catch {
+            lastError = `${field}: ${res.status} ${res.statusText}`;
+          }
+        }
+        continue;
+      }
+
+      const data = await res.json();
+      const name = data?.payload?.name || data?.payload || data?.name;
+      if (!name) {
+        lastError = `${field}: Không nhận được tên ảnh`;
+        continue;
+      }
+      return String(name);
+    } catch (err) {
+      lastError = `${field}: ${err instanceof Error ? err.message : 'Tải ảnh lên thất bại'}`;
+    }
+  }
+
+  throw new Error(lastError);
 }
 
 export async function createCitizenReport(payload: CreateReportRequest) {
@@ -175,6 +283,35 @@ export async function createCitizenReport(payload: CreateReportRequest) {
 
   if (!res.ok) {
     let message = 'Tạo báo cáo thất bại';
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function createComplaintReport(payload: ComplaintReportRequest) {
+  const res = await fetch(`${API_CONFIG.BASE_URL}/citizen/citizens/complaint-report`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    let message = 'Gửi khiếu nại thất bại';
     try {
       const body = await res.json();
       message = body?.message || message;

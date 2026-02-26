@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, User, Lock, Recycle, Users, Building2, Truck, Mail, Calendar, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Recycle, Users, Building2, Mail, Calendar, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
@@ -7,14 +7,14 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from '../hooks/useToast';
 import type { UserRole } from '../types';
-import { registerCitizen } from '../services/citizenService';
+import { registerCitizen, registerEnterprise } from '../services/citizenService';
 
 interface RegisterPageProps {
 	onRegister: (data: any) => void;
 	onBackToLogin: () => void;
 }
 
-type RegisterRole = Extract<UserRole, 'CITIZEN' | 'COLLECTOR' | 'ENTERPRISE'> | null;
+type RegisterRole = Extract<UserRole, 'CITIZEN' | 'ENTERPRISE'> | null;
 
 interface RoleOption {
 	value: RegisterRole;
@@ -38,7 +38,7 @@ export function RegisterPage({ onRegister, onBackToLogin }: RegisterPageProps) {
 	const [password, setPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
   
-	// Citizen & Collector specific fields
+	// Citizen specific fields
 	const [displayName, setDisplayName] = useState('');
   
 	// Enterprise specific fields
@@ -54,13 +54,6 @@ export function RegisterPage({ onRegister, onBackToLogin }: RegisterPageProps) {
 			description: 'Báo cáo rác thải, nhận điểm thưởng và đóng góp cho môi trường',
 			icon: Users,
 			color: 'bg-blue-50 border-blue-200 hover:border-blue-400'
-		},
-		{
-			value: 'COLLECTOR',
-			label: 'Nhân viên thu gom',
-			description: 'Thực hiện nhiệm vụ thu gom và xử lý rác thải',
-			icon: Truck,
-			color: 'bg-orange-50 border-orange-200 hover:border-orange-400'
 		},
 		{
 			value: 'ENTERPRISE',
@@ -143,40 +136,37 @@ export function RegisterPage({ onRegister, onBackToLogin }: RegisterPageProps) {
 			return;
 		}
 
-		// Keep previous local handling for other roles (collector/enterprise)
-		if (selectedRole === 'COLLECTOR' && !displayName) {
-			toastError('Vui lòng nhập tên hiển thị');
-			return;
-		}
-
-		let registerData: any = {
-			email,
-			fullName,
-			gender,
-			dob,
-			password,
-			role: selectedRole,
-		};
-
-		if (selectedRole === 'CITIZEN' || selectedRole === 'COLLECTOR') {
-			registerData.displayName = displayName;
-			registerData.avatarName = 'default_avatar';
-		}
-
 		if (selectedRole === 'ENTERPRISE') {
 			if (!companyName || !tin || !address || !contactInfo) {
 				toastError('Vui lòng điền đầy đủ thông tin doanh nghiệp');
 				return;
 			}
-			registerData.name = companyName;
-			registerData.tin = tin;
-			registerData.address = address;
-			registerData.contactInfo = contactInfo;
-			registerData.avatarName = 'company_logo.png';
-		}
 
-		toastSuccess('Đăng ký thành công! Vui lòng đăng nhập.');
-		onRegister(registerData);
+			const payload = {
+				email,
+				fullName,
+				gender,
+				dob,
+				password,
+				name: companyName,
+				tin,
+				avatarName: 'company_logo.png',
+				address,
+				contactInfo,
+			};
+
+			try {
+				setSubmitting(true);
+				await registerEnterprise(payload);
+				toastSuccess('Đăng ký thành công! Vui lòng đăng nhập.');
+				onRegister(payload);
+			} catch (err) {
+				toastError(err instanceof Error ? err.message : 'Đăng ký thất bại');
+			} finally {
+				setSubmitting(false);
+			}
+			return;
+		}
 	};
 
 	return (
@@ -388,7 +378,7 @@ export function RegisterPage({ onRegister, onBackToLogin }: RegisterPageProps) {
 								</div>
 
 								{/* Role-specific Fields */}
-								{(selectedRole === 'CITIZEN' || selectedRole === 'COLLECTOR') && (
+																{selectedRole === 'CITIZEN' && (
 									<div className="space-y-2">
 										<label className="text-sm font-medium">Tên hiển thị <span className="text-red-500">*</span></label>
 										<Input

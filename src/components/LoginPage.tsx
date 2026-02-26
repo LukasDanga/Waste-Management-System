@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast, toastMessages } from '../hooks/useToast';
 import type { UserRole } from '../types';
-import { Eye, EyeOff, User, Lock, Recycle, Users, Building2, Truck, Settings, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Recycle, Users, Building2, Settings, ArrowRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Checkbox } from './ui/checkbox';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface LoginPageProps {
   onLogin: (user: { email: string; role: string; name?: string }) => void;
@@ -30,6 +31,7 @@ export function LoginPage({ onLogin, onNavigateToRegister }: LoginPageProps) {
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('CITIZEN');
   const auth = useAuth();
   const { error: toastError } = useToast();
 
@@ -51,14 +53,6 @@ export function LoginPage({ onLogin, onNavigateToRegister }: LoginPageProps) {
       color: 'bg-green-50 border-green-200 hover:bg-green-100'
     },
     {
-      icon: Truck,
-      role: 'COLLECTOR',
-      roleDisplay: 'Nhân viên thu gom',
-      username: 'collector_demo',
-      password: 'collector123',
-      color: 'bg-orange-50 border-orange-200 hover:bg-orange-100'
-    },
-    {
       icon: Settings,
       role: 'SUPER_ADMIN',
       roleDisplay: 'Quản trị viên cấp cao',
@@ -71,6 +65,7 @@ export function LoginPage({ onLogin, onNavigateToRegister }: LoginPageProps) {
   const handleAutoFill = (account: DemoAccount) => {
     setUsername(account.username);
     setPassword(account.password);
+    setSelectedRole(account.role as UserRole);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,9 +76,9 @@ export function LoginPage({ onLogin, onNavigateToRegister }: LoginPageProps) {
     if (username && password) {
       // Find the role based on username (demo accounts) or fallback to citizen
       const account = demoAccounts.find(acc => acc.username === username);
-      const roleCode = (account?.role || 'CITIZEN') as UserRole;
+      const roleCode = (account?.role || selectedRole || 'CITIZEN') as UserRole;
 
-      const result = await auth.login(username, password, roleCode);
+      const result = await auth.login(username, password, selectedRole || roleCode);
 
       if (result.success && result.user) {
         onLogin({ email: result.user.email, role: result.user.role, name: result.user.name });
@@ -175,6 +170,21 @@ export function LoginPage({ onLogin, onNavigateToRegister }: LoginPageProps) {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+              </div>
+
+              {/* Role Select */}
+              <div className="space-y-2">
+                <label className="text-sm">Vai trò</label>
+                <Select value={selectedRole} onValueChange={(v: string) => setSelectedRole(v as UserRole)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn vai trò" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CITIZEN">Người dân</SelectItem>
+                    <SelectItem value="ENTERPRISE">Doanh nghiệp</SelectItem>
+                    <SelectItem value="SUPER_ADMIN">Quản trị viên</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Remember Me */}

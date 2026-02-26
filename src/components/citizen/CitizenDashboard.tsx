@@ -3,10 +3,8 @@ import { CitizenLayout } from './CitizenLayout';
 import { DashboardOverview } from './DashboardOverview/DashboardOverview';
 import { CreateReport } from './CreateReport/CreateReport';
 import { MyReports } from './MyReports/MyReports';
-import { ReportDetail } from './MyReports/ReportDetail';
 import { PointsRewards } from './PointsRewards/PointsRewards';
 import { Leaderboard } from './Leaderboard/Leaderboard';
-import { Feedback } from './Feedback/Feedback';
 import { Profile } from './Profile/Profile';
 
 interface CitizenDashboardProps {
@@ -19,7 +17,6 @@ interface CitizenDashboardProps {
 
 export function CitizenDashboard({ userData, onLogout }: CitizenDashboardProps) {
   const [currentSection, setCurrentSection] = useState<string>('dashboard');
-  const [reportDetailData, setReportDetailData] = useState<any>(null);
 
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
@@ -29,12 +26,11 @@ export function CitizenDashboard({ userData, onLogout }: CitizenDashboardProps) 
     }
   }, []);
 
-  const handleNavigate = (section: string, data?: any) => {
-    setCurrentSection(section);
-    window.location.hash = `citizen/${section}`;
-    if (section === 'report-detail' && data) {
-      setReportDetailData(data);
-    }
+  const handleNavigate = (section: string) => {
+    // No detail view now; redirect any detail intent back to list
+    const nextSection = section === 'report-detail' ? 'my-reports' : section;
+    setCurrentSection(nextSection);
+    window.location.hash = `citizen/${nextSection}`;
   };
 
   const renderContent = () => {
@@ -45,14 +41,10 @@ export function CitizenDashboard({ userData, onLogout }: CitizenDashboardProps) 
         return <CreateReport onNavigate={handleNavigate} />;
       case 'my-reports':
         return <MyReports onNavigate={handleNavigate} />;
-      case 'report-detail':
-        return <ReportDetail onNavigate={handleNavigate} reportData={reportDetailData} />;
       case 'points':
         return <PointsRewards />;
       case 'leaderboard':
         return <Leaderboard />;
-      case 'feedback':
-        return <Feedback />;
       case 'profile':
         return <Profile />;
       default:
