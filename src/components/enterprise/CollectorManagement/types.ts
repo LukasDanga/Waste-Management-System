@@ -1,6 +1,7 @@
 export interface Collector {
   id: number;
   name: string;
+  email: string;
   phone: string;
   vehicle: string;
   licensePlate: string;
@@ -8,8 +9,6 @@ export interface Collector {
   statusLabel: string;
   todayJobs: { completed: number; total: number };
   weekJobs: number;
-  rating: number;
-  totalReviews: number;
   avatar: string;
   joinDate: string;
 }
