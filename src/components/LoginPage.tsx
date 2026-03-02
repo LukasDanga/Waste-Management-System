@@ -1,13 +1,13 @@
+import { ArrowRight, Building2, Eye, EyeOff, Lock, Recycle, Settings, User, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useToast, toastMessages } from '../hooks/useToast';
+import { toastMessages, useToast } from '../hooks/useToast';
 import type { UserRole } from '../types';
-import { Eye, EyeOff, User, Lock, Recycle, Users, Building2, Settings, ArrowRight } from 'lucide-react';
+import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Checkbox } from './ui/checkbox';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface LoginPageProps {
@@ -181,6 +181,7 @@ export function LoginPage({ onLogin, onNavigateToRegister }: LoginPageProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="CITIZEN">Người dân</SelectItem>
+                    <SelectItem value="COLLECTOR">Người thu gom</SelectItem>
                     <SelectItem value="ENTERPRISE">Doanh nghiệp</SelectItem>
                     <SelectItem value="SUPER_ADMIN">Quản trị viên</SelectItem>
                   </SelectContent>
