@@ -26,6 +26,8 @@ export function CreateReport({ onNavigate }: CreateReportProps) {
   const [wasteTypes, setWasteTypes] = useState<WasteOption[]>([]);
   const [loadingTypes, setLoadingTypes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploaded, setImageUploaded] = useState(false);
   const { success: toastSuccess, error: toastError } = useToast();
   const [formData, setFormData] = useState<ReportFormData>({
     wasteType: 'PLASTIC',
@@ -65,6 +67,7 @@ export function CreateReport({ onNavigate }: CreateReportProps) {
     if (file) {
       setImageFile(file);
       setImageUrl('');
+      setImageUploaded(false);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -81,9 +84,30 @@ export function CreateReport({ onNavigate }: CreateReportProps) {
       return;
     }
     setImageFile(null);
+    setImageUploaded(false);
     setImagePreview(imageUrl.trim());
     setFormData((prev) => ({ ...prev, imageName: imageUrl.trim() }));
     setStep(2);
+  };
+
+  const handleUploadToServer = async () => {
+    if (!imageFile) {
+      toastError('Vui lòng chọn file ảnh để tải lên');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const uploadedName = await uploadReportImage(imageFile);
+      setFormData((prev) => ({ ...prev, imageName: uploadedName }));
+      setImageUploaded(true);
+      toastSuccess('Đã tải ảnh lên máy chủ');
+    } catch (err) {
+      setImageUploaded(false);
+      toastError(err instanceof Error ? err.message : 'Tải ảnh lên thất bại');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -99,8 +123,9 @@ export function CreateReport({ onNavigate }: CreateReportProps) {
     setSubmitting(true);
     try {
       let imageName = formData.imageName;
-      if (imageFile) {
+      if (imageFile && !imageUploaded) {
         imageName = await uploadReportImage(imageFile);
+        setImageUploaded(true);
         setFormData((prev) => ({ ...prev, imageName }));
       }
       if (!imageName) {
@@ -142,6 +167,7 @@ export function CreateReport({ onNavigate }: CreateReportProps) {
             setImagePreview(null);
             setImageFile(null);
             setImageUrl('');
+            setImageUploaded(false);
             setFormData({ ...formData, imageName: '' });
             setStep(1);
           }}
@@ -169,6 +195,9 @@ export function CreateReport({ onNavigate }: CreateReportProps) {
           onBack={() => setStep(2)}
           onSubmit={handleSubmit}
           submitting={submitting}
+          onUploadImage={handleUploadToServer}
+          uploadingImage={uploadingImage}
+          uploadedImageName={imageUploaded ? formData.imageName : ''}
         />
       )}
     </div>
