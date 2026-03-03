@@ -256,7 +256,7 @@ export async function uploadReportImage(file: File, purpose = 'CollectionReport'
       }
 
       const data = await res.json();
-      const name = data?.payload?.name || data?.payload || data?.name;
+      const name = data?.payload?.imageName || data?.payload?.name || data?.payload || data?.name;
       if (!name) {
         lastError = `${field}: Không nhận được tên ảnh`;
         continue;

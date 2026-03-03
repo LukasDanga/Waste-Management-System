@@ -50,24 +50,6 @@ export function StepImageUpload({ imagePreview, onUpload, onRemove, onNext, imag
               </label>
               <input id="image-upload" type="file" accept="image/*" className="hidden" onChange={onUpload} />
             </div>
-
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Link2 className="h-4 w-4" /> Hoặc dán URL ảnh
-              </label>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Input
-                  placeholder="https://..."
-                  value={imageUrl}
-                  onChange={(e) => onImageUrlChange(e.target.value)}
-                  className="flex-1"
-                />
-                <Button type="button" className="bg-gray-200 text-gray-800 hover:bg-gray-300" onClick={onUseImageUrl}>
-                  Dùng URL
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500">Hỗ trợ liên kết ảnh công khai hoặc ảnh đã lưu trên máy chủ.</p>
-            </div>
           </div>
         )}
       </div>
