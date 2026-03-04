@@ -1,5 +1,56 @@
 import { API_CONFIG } from "../../config/api.config";
+export interface BonusRule {
+  [key: string]: unknown;
+}
 
+export interface PenaltyRule {
+  [key: string]: unknown;
+}
+
+export interface RewardPolicy {
+  rewardPolicyID: string;
+  name: string;
+  description: string;
+  basePoint: number;
+  effectiveDate: string;
+  expiredDate: string;
+  bonusRules: BonusRule[];
+  penaltyRules: PenaltyRule[];
+  enterpriseID: string;
+}
+
+export interface Capacity {
+  [key: string]: unknown;
+}
+
+export interface EnterpriseMember {
+  memberID: string;
+  userID: string;
+  assignedAt: string;
+  unassignedAt: string;
+  enterpriseID: string;
+}
+
+export interface EnterpriseProfile {
+  enterpriseID: string;
+  userID: string;
+  name: string;
+  tin: string;
+  avatarName: string;
+  address: string;
+  contactInfo: string;
+  createdAt: string;
+  isActive: boolean;
+  rewardPolicies: RewardPolicy[];
+  capacities: Capacity[];
+  members: EnterpriseMember[];
+}
+
+export interface EnterpriseProfileResponse {
+  success: boolean;
+  payload: EnterpriseProfile;
+  timestamp: string;
+}
 export interface CreateCollectorRequest {
   contactInfo: string;
   email: string;
@@ -55,6 +106,31 @@ export async function createCollector(payload: CreateCollectorRequest) {
   }
 }
 
+export async function getMyProfile(): Promise<EnterpriseProfileResponse> {
+  const res = await fetch(
+    `${API_CONFIG.BASE_URL}/enterprise/enterprises/my-profile`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...getAuthHeaders(),
+      },
+    },
+  );
+
+  if (!res.ok) {
+    let message = "Lấy thông tin doanh nghiệp thất bại";
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+}
 export async function createRewardPolicy(payload: CreateRewardPolicyRequest) {
   const res = await fetch(
     `${API_CONFIG.BASE_URL}/enterprise/enterprises/reward-policy`,
