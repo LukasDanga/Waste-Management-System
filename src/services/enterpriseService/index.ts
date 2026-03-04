@@ -18,9 +18,17 @@ export interface RewardPolicy {
   penaltyRules: PenaltyRule[];
   enterpriseID: string;
 }
-
 export interface Capacity {
-  [key: string]: unknown;
+  capacityID: string;
+  maxDailyCapacity: number;
+  regionCode: string;
+  unitOfMeasure: number; // DEFAULT: 0, do not change
+  currentLoad: number;
+  createdAt: string;
+  closedAt: string;
+  collectionAssignments: any[];
+  wasteType: string;
+  enterpriseID: string;
 }
 
 export interface EnterpriseMember {
@@ -64,6 +72,24 @@ export interface CreateRewardPolicyRequest {
   name: string;
   description: string;
   basePoint: number;
+}
+
+export interface CitizenArea {
+  citizenAreaID: string;
+  name: string;
+  regionCode: string;
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+  isActive: boolean;
+}
+
+export interface CreateCapacityRequest {
+  maxDailyCapacity: number;
+  regionCode: string;
+  unitOfMeasure: number; // DEFAULT: 0, do not change
+  wasteType: string;
 }
 
 const getAuthHeaders = (): Record<string, string> => {
@@ -147,6 +173,64 @@ export async function createRewardPolicy(payload: CreateRewardPolicyRequest) {
 
   if (!res.ok) {
     let message = "Tạo chính sách điểm thưởng thất bại";
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchAreas(): Promise<CitizenArea[]> {
+  const res = await fetch(`${API_CONFIG.BASE_URL}/citizen/citizens/area`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    let message = "Không tải được danh sách khu vực";
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  const data = await res.json();
+  const list = data?.payload || data?.data || data;
+  if (!Array.isArray(list)) return [];
+  return list as CitizenArea[];
+}
+
+export async function createCapacity(payload: CreateCapacityRequest) {
+  const res = await fetch(
+    `${API_CONFIG.BASE_URL}/enterprise/enterprises/capacity`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!res.ok) {
+    let message = "Tạo năng lực thu gom thất bại";
     try {
       const body = await res.json();
       message = body?.message || message;

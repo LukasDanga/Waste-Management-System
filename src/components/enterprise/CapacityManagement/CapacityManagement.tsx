@@ -1,55 +1,72 @@
-import { CompanyInfoCard } from './CompanyInfoCard';
+import { useCallback, useEffect, useState } from 'react';
+import { getMyProfile, type EnterpriseProfile } from '../../../services/enterpriseService';
 import { CapacityForm } from './CapacityForm';
+import { CompanyInfoCard } from './CompanyInfoCard';
 import { ServiceAreasSection } from './ServiceAreasSection';
-import { WasteTypesSection } from './WasteTypesSection';
 import type { ServiceArea, WasteType } from './types';
+import { WasteTypesSection } from './WasteTypesSection';
 
 export function CapacityManagement() {
-  const wasteTypes: WasteType[] = [
-    {
-      type: 'organic',
-      label: '🌿 Rác hữu cơ',
-      registered: true,
-      capacity: 50,
-      currentUsage: 25,
-      unit: 'tấn/tháng'
-    },
-    {
-      type: 'recyclable',
-      label: '♻️ Rác tái chế',
-      registered: true,
-      capacity: 100,
-      currentUsage: 82,
-      unit: 'tấn/tháng'
-    },
-    {
-      type: 'hazardous',
-      label: '⚠️ Rác nguy hại',
-      registered: false,
-      capacity: 0,
-      currentUsage: 0,
-      unit: 'tấn/tháng'
-    },
-    {
-      type: 'general',
-      label: '🗑️ Rác thông thường',
-      registered: true,
-      capacity: 80,
-      currentUsage: 45,
-      unit: 'tấn/tháng'
-    }
-  ];
+  const [profile, setProfile] = useState<EnterpriseProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const serviceAreas: ServiceArea[] = [
-    { id: 'q1', label: 'Quận 1', checked: true },
-    { id: 'q3', label: 'Quận 3', checked: true },
-    { id: 'q5', label: 'Quận 5', checked: false },
-    { id: 'q7', label: 'Quận 7', checked: true },
-    { id: 'q10', label: 'Quận 10', checked: false },
-    { id: 'pn', label: 'Phú Nhuận', checked: false },
-    { id: 'tb', label: 'Tân Bình', checked: true },
-    { id: 'go', label: 'Gò Vấp', checked: false }
-  ];
+  const loadProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getMyProfile();
+      setProfile(res.payload);
+    } catch (e: any) {
+      setError(e?.message || 'Không tải được thông tin doanh nghiệp');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  // Map capacities → WasteType[] (currentLoad từ API)
+  const wasteTypes: WasteType[] = (profile?.capacities ?? []).map((cap) => ({
+    type: cap.wasteType,
+    label: cap.wasteType,
+    registered: true,
+    capacity: cap.maxDailyCapacity,
+    currentUsage: cap.currentLoad,
+    unit: 'kg/ngày',
+  }));
+
+  // Map capacities → ServiceArea[] (unique theo regionCode)
+  const seen = new Set<string>();
+  const serviceAreas: ServiceArea[] = (profile?.capacities ?? [])
+    .filter((cap) => {
+      if (seen.has(cap.regionCode)) return false;
+      seen.add(cap.regionCode);
+      return true;
+    })
+    .map((cap) => ({
+      id: cap.regionCode,
+      label: cap.regionCode,
+      checked: true,
+    }));
+
+  if (loading) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Đang tải thông tin doanh nghiệp...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center text-red-500">
+        ❌ {error}
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto">
@@ -59,17 +76,25 @@ export function CapacityManagement() {
       </div>
 
       <CompanyInfoCard
-        name="Green Recycle Co., Ltd"
-        license="#ENV-2024-001"
-        issueDate="15/01/2024"
-        expiryDate="15/01/2029"
+        name={profile?.name ?? '---'}
+        license={profile?.tin ?? '---'}
+        issueDate={profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('vi-VN') : '---'}
+        expiryDate="---"
       />
 
-      <WasteTypesSection wasteTypes={wasteTypes} />
+      {wasteTypes.length > 0 ? (
+        <WasteTypesSection wasteTypes={wasteTypes} />
+      ) : (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+          ⚠️ Chưa có năng lực thu gom nào được đăng ký.
+        </div>
+      )}
 
-      <ServiceAreasSection serviceAreas={serviceAreas} />
+      {serviceAreas.length > 0 && (
+        <ServiceAreasSection serviceAreas={serviceAreas} />
+      )}
 
-      <CapacityForm />
+      <CapacityForm onSuccess={loadProfile} />
     </div>
   );
 }
