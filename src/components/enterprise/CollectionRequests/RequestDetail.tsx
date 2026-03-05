@@ -1,150 +1,148 @@
-import { useState } from 'react';
-import { ArrowLeft, MapPin, User, Calendar, Package, CheckCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Calendar, CheckCircle, MapPin, Package, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { API_CONFIG } from '../../../config/api.config';
+import {
+    createCollectionAssignment,
+    getMyProfile,
+    type Capacity,
+    type EnterpriseMember,
+    type EnterpriseProfile,
+} from '../../../services/enterpriseService';
+import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
-import { Badge } from '../../ui/badge';
 import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { Textarea } from '../../ui/textarea';
+import type { RequestItem } from './types';
 
 interface RequestDetailProps {
   onNavigate: (section: string) => void;
-  requestData?: any;
+  requestData?: RequestItem;
 }
 
 export function RequestDetail({ onNavigate, requestData }: RequestDetailProps) {
-  const [selectedCollector, setSelectedCollector] = useState<string>('');
+  const [profile, setProfile] = useState<EnterpriseProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
-  const request = requestData || {
-    id: '#R20260112-001',
-    location: '123 Nguyễn Văn A, Quận 1, TP.HCM',
-    type: 'recyclable',
-    typeLabel: '♻️ Rác tái chế',
-    weight: '15kg',
-    reporter: 'Nguyễn Thị A',
-    reporterPhone: '0901234567',
-    timeCreated: '12/01/2026 09:30',
-    description: 'Nhiều chai nhựa và hộp giấy cần thu gom. Vui lòng đến sau 14h.',
-    status: 'accepted',
-    image: 'https://images.unsplash.com/photo-1557344252-4d5c9909579c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZWN5Y2xpbmclMjBwbGFzdGljJTIwYm90dGxlc3xlbnwxfHx8fDE3NjgxOTIxMjN8MA&ixlib=rb-4.1.0&q=80&w=1080'
-  };
+  const [selectedMemberID, setSelectedMemberID] = useState('');
+  const [selectedCapacityID, setSelectedCapacityID] = useState('');
+  const [priority, setPriority] = useState<number>(1);
+  const [wasteType, setWasteType] = useState(requestData?.type ?? '');
+  const [note, setNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const collectors = [
-    {
-      id: 'collector1',
-      name: 'Nguyễn Văn B',
-      distance: '2.3km',
-      completedJobs: 45,
-      status: 'available',
-      statusLabel: 'Đang rảnh',
-      rating: 4.8,
-      currentJobs: 0
-    },
-    {
-      id: 'collector2',
-      name: 'Trần Văn C',
-      distance: '5.1km',
-      completedJobs: 38,
-      status: 'busy',
-      statusLabel: 'Đang có 2 việc',
-      rating: 4.6,
-      currentJobs: 2
-    },
-    {
-      id: 'collector3',
-      name: 'Lê Minh D',
-      distance: '3.8km',
-      completedJobs: 52,
-      status: 'available',
-      statusLabel: 'Đang rảnh',
-      rating: 4.9,
-      currentJobs: 0
-    }
-  ];
+  useEffect(() => {
+    setProfileLoading(true);
+    getMyProfile()
+      .then((res) => setProfile(res.payload))
+      .catch((err) => setProfileError(err.message ?? 'Không tải được hồ sơ doanh nghiệp'))
+      .finally(() => setProfileLoading(false));
+  }, []);
 
-  const handleAssign = () => {
-    if (!selectedCollector) {
-      alert('Vui lòng chọn collector!');
-      return;
-    }
-    const collector = collectors.find(c => c.id === selectedCollector);
-    alert(`Đã phân công cho ${collector?.name}`);
-    onNavigate('requests');
-  };
+  if (!requestData) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Không có dữ liệu yêu cầu.
+        <Button className="mt-4" onClick={() => onNavigate('requests')}>Quay lại</Button>
+      </div>
+    );
+  }
 
-  const handleReject = () => {
-    if (confirm('Bạn có chắc muốn từ chối yêu cầu này?')) {
-      alert('Đã từ chối yêu cầu');
-      onNavigate('requests');
+  const isCorrected = wasteType.toUpperCase() !== (requestData.type ?? '').toUpperCase();
+
+  const handleAssign = async () => {
+    if (!selectedMemberID) { setSubmitError('Vui lòng chọn collector'); return; }
+    if (!selectedCapacityID) { setSubmitError('Vui lòng chọn năng lực thu gom'); return; }
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await createCollectionAssignment({
+        collectionReportID: requestData.collectionReportID,
+        capacityID: selectedCapacityID,
+        assigneeID: selectedMemberID,
+        priority,
+        wasteType: wasteType || requestData.type,
+        isCorrected,
+        note,
+        bonusRuleIDs: [],
+        penaltyRuleIDs: [],
+      });
+      onNavigate('requests', { justAssignedId: requestData.collectionReportID });
+    } catch (err: any) {
+      setSubmitError(err.message ?? 'Phân công thất bại');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const isAssigned = request.status === 'assigned' || request.status === 'completed';
+  const formatDate = (iso: string) => {
+    try { return new Date(iso).toLocaleString('vi-VN'); } catch { return iso; }
+  };
+
+  const imageUrl = requestData.image || `${API_CONFIG.IMAGE_BASE_URL}/${requestData.imageName}`;
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <Button
-          onClick={() => onNavigate('requests')}
-          className="mb-4 bg-transparent hover:bg-gray-100 text-gray-800"
-        >
+        <Button onClick={() => onNavigate('requests')} className="mb-4 bg-transparent hover:bg-gray-100 text-gray-800">
           <ArrowLeft className="mr-2 h-5 w-5" />
           Quay lại
         </Button>
 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">{request.id}</h1>
-            <p className="text-gray-600">{request.timeCreated}</p>
+            <h1 className="text-3xl font-bold mb-2">{requestData.id}</h1>
+            <p className="text-gray-600">{formatDate(requestData.reportAt)}</p>
           </div>
-          <Badge className="px-4 py-2 text-base bg-blue-100 text-blue-700 border-blue-300">
-            {request.status === 'pending' ? '🆕 Mới' :
-             request.status === 'accepted' ? '✅ Đã chấp nhận' :
-             request.status === 'assigned' ? '👷 Đã phân công' :
-             '✔️ Hoàn thành'}
+          <Badge className={`px-4 py-2 text-base ${
+            requestData.status === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
+            : requestData.status === 'accepted' ? 'bg-blue-100 text-blue-700 border-blue-300'
+            : 'bg-red-100 text-red-700 border-red-300'
+          }`}>
+            {requestData.status === 'pending' ? '⏳ Chờ phân công'
+              : requestData.status === 'accepted' ? '👷 Đã phân công'
+              : '❌ Từ chối'}
           </Badge>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Left Panel - Request Info */}
+        {/* Left Panel */}
         <div className="space-y-6">
-          {/* Image */}
           <Card className="p-4">
             <img
-              src={request.image}
-              alt={request.typeLabel}
+              src={imageUrl}
+              alt={requestData.typeLabel}
               className="w-full h-64 object-cover rounded-lg"
+              onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/600x300?text=No+Image'; }}
             />
           </Card>
 
-          {/* Basic Info */}
           <Card className="p-6">
             <h2 className="text-xl font-bold mb-4">Thông tin yêu cầu</h2>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <Package className="h-5 w-5 text-gray-500 mt-1" />
                 <div>
-                  <p className="text-sm text-gray-600">Loại rác</p>
-                  <p className="font-semibold">{request.typeLabel}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Package className="h-5 w-5 text-gray-500 mt-1" />
-                <div>
-                  <p className="text-sm text-gray-600">Khối lượng ước tính</p>
-                  <p className="font-semibold">{request.weight}</p>
+                  <p className="text-sm text-gray-600">Loại rác (báo cáo)</p>
+                  <p className="font-semibold">{requestData.typeLabel}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-gray-500 mt-1" />
                 <div>
-                  <p className="text-sm text-gray-600">Địa chỉ</p>
-                  <p className="font-semibold">{request.location}</p>
-                  <div className="h-32 bg-gray-200 rounded-lg mt-2 flex items-center justify-center text-gray-500">
-                    🗺️ Bản đồ
-                  </div>
+                  <p className="text-sm text-gray-600">Khu vực</p>
+                  <p className="font-semibold">{requestData.regionCode || '—'}</p>
+                  {requestData.gps && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      GPS: {requestData.gps.latitude.toFixed(5)}, {requestData.gps.longitude.toFixed(5)}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -152,8 +150,8 @@ export function RequestDetail({ onNavigate, requestData }: RequestDetailProps) {
                 <User className="h-5 w-5 text-gray-500 mt-1" />
                 <div>
                   <p className="text-sm text-gray-600">Người báo cáo</p>
-                  <p className="font-semibold">{request.reporter}</p>
-                  <p className="text-sm text-gray-600">{request.reporterPhone}</p>
+                  <p className="font-semibold">{requestData.reporter}</p>
+                  <p className="text-xs text-gray-400 font-mono">{requestData.citizenProfileID}</p>
                 </div>
               </div>
 
@@ -161,138 +159,155 @@ export function RequestDetail({ onNavigate, requestData }: RequestDetailProps) {
                 <Calendar className="h-5 w-5 text-gray-500 mt-1" />
                 <div>
                   <p className="text-sm text-gray-600">Thời gian tạo</p>
-                  <p className="font-semibold">{request.timeCreated}</p>
+                  <p className="font-semibold">{formatDate(requestData.reportAt)}</p>
                 </div>
               </div>
 
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Mô tả chi tiết</p>
-                <p className="text-sm bg-gray-50 p-3 rounded-lg">{request.description}</p>
-              </div>
+              {requestData.description && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">Mô tả chi tiết</p>
+                  <p className="text-sm bg-gray-50 p-3 rounded-lg">{requestData.description}</p>
+                </div>
+              )}
             </div>
           </Card>
         </div>
 
-        {/* Right Panel - Assignment */}
+        {/* Right Panel */}
         <div>
-          {!isAssigned ? (
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-6">Chọn Collector</h2>
-              
-              <RadioGroup value={selectedCollector} onValueChange={setSelectedCollector}>
-                <div className="space-y-4">
-                  {collectors.map((collector) => (
-                    <label
-                      key={collector.id}
-                      className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        selectedCollector === collector.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <RadioGroupItem value={collector.id} id={collector.id} className="mt-1" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold mb-2">{collector.name}</h3>
-                        <div className="space-y-1 text-sm">
-                          <p className="text-gray-600">
-                            📍 {collector.distance} | ✅ {collector.completedJobs} công việc
-                          </p>
-                          <p className="text-gray-600">⭐ {collector.rating}/5.0</p>
-                          <p className={collector.status === 'available' ? 'text-green-600' : 'text-yellow-600'}>
-                            {collector.status === 'available' ? '🟢' : '🟡'} {collector.statusLabel}
-                          </p>
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </RadioGroup>
-
-              <div className="flex gap-3 mt-6">
-                <Button
-                  onClick={handleAssign}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  disabled={!selectedCollector}
-                >
-                  <CheckCircle className="mr-2 h-5 w-5" />
-                  Phân công
-                </Button>
-                <Button
-                  onClick={handleReject}
-                  className="flex-1 text-red-600 border border-red-300 bg-white hover:bg-red-50"
-                >
-                  Từ chối yêu cầu
-                </Button>
+          {requestData.status === 'rejected' && (
+            <Card className="p-6 bg-red-50 border-red-200">
+              <div className="flex items-center gap-3 text-red-600">
+                <AlertCircle className="h-6 w-6" />
+                <p className="font-semibold text-lg">Yêu cầu đã bị từ chối</p>
               </div>
+              <p className="mt-2 text-gray-500 text-sm">Yêu cầu này không thể phân công.</p>
             </Card>
-          ) : (
-            <div className="space-y-6">
-              {/* Assigned Collector Info */}
-              <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
-                <h2 className="text-xl font-bold mb-4">Thông tin Collector</h2>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl">
-                      👤
-                    </div>
-                    <div>
-                      <p className="font-semibold text-lg">Nguyễn Văn B</p>
-                      <p className="text-sm text-gray-600">📞 0901234567</p>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-white rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Trạng thái</p>
-                    <p className="font-semibold text-blue-600">🚛 Đang đến địa điểm</p>
-                  </div>
-                </div>
+          )}
 
-                <Button className="w-full mt-4 bg-blue-600 hover:bg-blue-700">
-                  Liên hệ Collector
-                </Button>
-              </Card>
+          {requestData.status === 'accepted' && (
+            <Card className="p-6 bg-blue-50 border-blue-200">
+              <div className="flex items-center gap-3 text-blue-600">
+                <CheckCircle className="h-6 w-6" />
+                <p className="font-semibold text-lg">Đã phân công</p>
+              </div>
+              <p className="mt-2 text-gray-500 text-sm">Yêu cầu này đã được phân công cho collector.</p>
+            </Card>
+          )}
 
-              {/* Timeline */}
-              <Card className="p-6">
-                <h2 className="text-xl font-bold mb-6">Tiến trình</h2>
-                <div className="space-y-4">
-                  {[
-                    { status: 'completed', title: 'Yêu cầu được tạo', time: '09:30 12/01/2026' },
-                    { status: 'completed', title: 'Đã chấp nhận yêu cầu', time: '10:00 12/01/2026' },
-                    { status: 'current', title: 'Đã phân công cho Nguyễn Văn B', time: '10:30 12/01/2026' },
-                    { status: 'pending', title: 'Đang thu gom', time: 'Dự kiến: 14:00' }
-                  ].map((item, index) => (
-                    <div key={index} className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            item.status === 'completed'
-                              ? 'bg-green-100 text-green-600'
-                              : item.status === 'current'
-                              ? 'bg-blue-100 text-blue-600'
-                              : 'bg-gray-100 text-gray-400'
-                          }`}
-                        >
-                          {item.status === 'completed' && <CheckCircle className="h-4 w-4" />}
-                          {item.status === 'current' && <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />}
-                          {item.status === 'pending' && <div className="w-2 h-2 bg-gray-300 rounded-full" />}
+          {requestData.status === 'pending' && (
+            <Card className="p-6">
+              <h2 className="text-xl font-bold mb-6">Phân công Collector</h2>
+
+              {profileLoading && <p className="text-gray-500">Đang tải danh sách collector...</p>}
+              {profileError && <p className="text-red-500">{profileError}</p>}
+
+              {!profileLoading && !profileError && profile && (
+                <div className="space-y-6">
+                  {/* Collector selection */}
+                  <div>
+                    <p className="font-semibold mb-3">1. Chọn Collector</p>
+                    {profile.members.length === 0 ? (
+                      <p className="text-sm text-gray-500">Chưa có collector nào trong doanh nghiệp.</p>
+                    ) : (
+                      <RadioGroup value={selectedMemberID} onValueChange={setSelectedMemberID}>
+                        <div className="space-y-3">
+                          {profile.members.map((member: EnterpriseMember) => (
+                            <label
+                              key={member.memberID}
+                              className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                                selectedMemberID === member.userID
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              <RadioGroupItem value={member.userID} id={member.memberID} className="mt-1" />
+                              <div className="flex-1">
+                                <p className="font-semibold text-sm font-mono">{member.userID.slice(0, 16)}…</p>
+                                <p className="text-xs text-gray-500 mt-1">Tham gia: {formatDate(member.assignedAt)}</p>
+                              </div>
+                            </label>
+                          ))}
                         </div>
-                        {index < 3 && (
-                          <div
-                            className={`w-0.5 h-12 ${
-                              item.status === 'completed' ? 'bg-green-300' : 'bg-gray-200'
-                            }`}
-                          />
-                        )}
-                      </div>
-                      <div className="flex-1 pb-4">
-                        <h3 className="font-semibold mb-1">{item.title}</h3>
-                        <p className="text-sm text-gray-600">{item.time}</p>
-                      </div>
+                      </RadioGroup>
+                    )}
+                  </div>
+
+                  {/* Capacity selection */}
+                  <div>
+                    <p className="font-semibold mb-3">2. Chọn năng lực thu gom</p>
+                    <Select value={selectedCapacityID} onValueChange={setSelectedCapacityID}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn capacity..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {profile.capacities.map((cap: Capacity) => (
+                          <SelectItem key={cap.capacityID} value={cap.capacityID}>
+                            {cap.wasteType} — {cap.regionCode} ({cap.currentLoad}/{cap.maxDailyCapacity})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Priority */}
+                  <div>
+                    <p className="font-semibold mb-3">3. Mức độ ưu tiên</p>
+                    <Select value={String(priority)} onValueChange={(v) => setPriority(Number(v))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">🔴 Cao (High)</SelectItem>
+                        <SelectItem value="1">🟡 Trung bình (Medium)</SelectItem>
+                        <SelectItem value="2">🟢 Thấp (Low)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Actual waste type */}
+                  <div>
+                    <p className="font-semibold mb-2">4. Loại rác thực tế</p>
+                    <input
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      value={wasteType}
+                      onChange={(e) => setWasteType(e.target.value)}
+                      placeholder="Nhập loại rác thực tế..."
+                    />
+                    {isCorrected && (
+                      <p className="text-xs text-orange-600 mt-1">⚠️ Loại rác khác với báo cáo gốc ({requestData.type})</p>
+                    )}
+                  </div>
+
+                  {/* Note */}
+                  <div>
+                    <p className="font-semibold mb-2">5. Ghi chú</p>
+                    <Textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="Ghi chú cho collector..."
+                      rows={3}
+                    />
+                  </div>
+
+                  {submitError && (
+                    <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                      {submitError}
                     </div>
-                  ))}
+                  )}
+
+                  <Button
+                    onClick={handleAssign}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    disabled={submitting || !selectedMemberID || !selectedCapacityID}
+                  >
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    {submitting ? 'Đang phân công...' : 'Xác nhận phân công'}
+                  </Button>
                 </div>
-              </Card>
-            </div>
+              )}
+            </Card>
           )}
         </div>
       </div>

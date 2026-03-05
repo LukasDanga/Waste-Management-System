@@ -246,3 +246,49 @@ export async function createCapacity(payload: CreateCapacityRequest) {
     return null;
   }
 }
+
+export interface CreateCollectionAssignmentRequest {
+  collectionReportID: string;
+  capacityID: string;
+  assigneeID: string; // userID của member
+  priority: number; // High: 0, Medium: 1, Low: 2
+  wasteType: string;
+  isCorrected: boolean; // so sánh loại rác trong báo cáo citizen với loại thực tế
+  note: string;
+  bonusRuleIDs: string[];
+  penaltyRuleIDs: string[];
+}
+
+export async function createCollectionAssignment(
+  payload: CreateCollectionAssignmentRequest,
+) {
+  const res = await fetch(
+    `${API_CONFIG.BASE_URL}/enterprise/enterprises/collection-assignment`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!res.ok) {
+    let message = "Tạo phân công thu gom thất bại";
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
