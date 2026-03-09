@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { API_CONFIG } from '../../../config/api.config';
+import type { CitizenReportItem } from '../../../services/citizenService';
+import { fetchCitizenReports } from '../../../services/citizenService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { FiltersBar } from './FiltersBar';
 import { RequestCard } from './RequestCard';
@@ -6,99 +9,106 @@ import type { FiltersState, RequestItem } from './types';
 
 interface CollectionRequestsProps {
   onNavigate: (section: string, data?: any) => void;
+  justAssignedId?: string | null;
 }
 
-export function CollectionRequests({ onNavigate }: CollectionRequestsProps) {
+const WASTE_TYPE_LABELS: Record<string, string> = {
+  ORGANIC: '🌿 Rác hữu cơ',
+  RECYCLABLE: '♻️ Rác tái chế',
+  ELECTRONIC: '⚡ Rác điện tử',
+  HAZARDOUS: '☢️ Rác nguy hại',
+  GENERAL: '🗑️ Rác thông thường',
+  CONSTRUCTION: '🧱 Rác xây dựng',
+};
+
+function getTimeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = Math.floor((now - then) / 1000);
+  if (diff < 60) return `${diff} giây trước`;
+  if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+  return `${Math.floor(diff / 86400)} ngày trước`;
+}
+
+function mapToRequestItem(r: CitizenReportItem): RequestItem {
+  const statusCode = r.status ?? 0;
+  const status: RequestItem['status'] =
+    statusCode === 1 ? 'accepted' : statusCode === 2 ? 'rejected' : 'pending';
+  const wasteUpper = (r.wasteType ?? '').toUpperCase();
+  const imageName = r.imageName ?? '';
+  const imageUrl = imageName
+    ? `${API_CONFIG.IMAGE_BASE_URL}/${imageName}`
+    : 'https://placehold.co/400x300?text=No+Image';
+  return {
+    collectionReportID: r.collectionReportID,
+    id: `#${r.collectionReportID.slice(0, 8).toUpperCase()}`,
+    regionCode: r.regionCode ?? '',
+    type: r.wasteType ?? '',
+    typeLabel: WASTE_TYPE_LABELS[wasteUpper] ?? `🗑️ ${r.wasteType}`,
+    timeAgo: getTimeAgo(r.reportAt),
+    reportAt: r.reportAt,
+    priority: 'medium',
+    priorityLabel: 'Trung bình',
+    aiReason: null,
+    reporter: r.citizenName ?? r.citizenProfileID?.slice(0, 8) ?? 'Người dùng',
+    citizenProfileID: r.citizenProfileID ?? '',
+    description: r.description ?? '',
+    statusCode,
+    status,
+    image: imageUrl,
+    imageName,
+    gps: r.gps,
+  };
+}
+
+export function CollectionRequests({ onNavigate, justAssignedId }: CollectionRequestsProps) {
   const [filters, setFilters] = useState<FiltersState>({
     area: 'all',
     type: 'all',
-    weight: 'all'
+  });
+  const [allReports, setAllReports] = useState<RequestItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetchCitizenReports()
+      .then((list) => {
+        const mapped = list.map(mapToRequestItem);
+        if (justAssignedId) {
+          setAllReports(
+            mapped.map((r) =>
+              r.collectionReportID === justAssignedId
+                ? { ...r, statusCode: 1, status: 'accepted' as const }
+                : r,
+            ),
+          );
+        } else {
+          setAllReports(mapped);
+        }
+      })
+      .catch((err) => setError(err.message ?? 'Tải danh sách thất bại'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = allReports.filter((r) => {
+    if (filters.area !== 'all' && r.regionCode !== filters.area) return false;
+    if (filters.type !== 'all' && r.type.toUpperCase() !== filters.type.toUpperCase()) return false;
+    return true;
   });
 
-  const requests: RequestItem[] = [
-    {
-      id: '#R20260112-001',
-      location: '123 Nguyễn Văn A, Q1',
-      district: 'Q1',
-      type: 'recyclable',
-      typeLabel: '♻️ Rác tái chế',
-      weight: '15kg',
-      timeAgo: '2 giờ trước',
-      priority: 'high',
-      priorityLabel: 'Cao',
-      aiReason: 'Khối lượng lớn, khu vực ưu tiên',
-      reporter: 'Nguyễn Thị A',
-      status: 'pending',
-      image: 'https://images.unsplash.com/photo-1557344252-4d5c9909579c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZWN5Y2xpbmclMjBwbGFzdGljJTIwYm90dGxlc3xlbnwxfHx8fDE3NjgxOTIxMjN8MA&ixlib=rb-4.1.0&q=80&w=1080'
-    },
-    {
-      id: '#R20260112-002',
-      location: '456 Trần Hưng Đạo, Q5',
-      district: 'Q5',
-      type: 'organic',
-      typeLabel: '🌿 Rác hữu cơ',
-      weight: '8kg',
-      timeAgo: '3 giờ trước',
-      priority: 'medium',
-      priorityLabel: 'Trung bình',
-      aiReason: null,
-      reporter: 'Trần Văn B',
-      status: 'pending',
-      image: 'https://images.unsplash.com/photo-1592484773536-263bf52e81fc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvcmdhbmljJTIwd2FzdGUlMjBjb21wb3N0fGVufDF8fHx8MTc2ODE5MjEyNHww&ixlib=rb-4.1.0&q=80&w=1080'
-    },
-    {
-      id: '#R20260112-003',
-      location: '789 Lê Lợi, Q3',
-      district: 'Q3',
-      type: 'general',
-      typeLabel: '🗑️ Rác thông thường',
-      weight: '12kg',
-      timeAgo: '5 giờ trước',
-      priority: 'high',
-      priorityLabel: 'Cao',
-      aiReason: 'Báo cáo gần điểm thu gom',
-      reporter: 'Lê Minh C',
-      status: 'pending',
-      image: 'https://images.unsplash.com/photo-1580767114670-c778cc443675?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3YXN0ZSUyMHRyYXNoJTIwc3RyZWV0fGVufDF8fHx8MTc2ODE5MjEyM3ww&ixlib=rb-4.1.0&q=80&w=1080'
-    },
-    {
-      id: '#R20260112-004',
-      location: '321 Võ Văn Tần, Q3',
-      district: 'Q3',
-      type: 'recyclable',
-      typeLabel: '♻️ Rác tái chế',
-      weight: '20kg',
-      timeAgo: '1 giờ trước',
-      priority: 'high',
-      priorityLabel: 'Cao',
-      aiReason: 'Khối lượng rất lớn',
-      reporter: 'Phạm Thị D',
-      status: 'accepted',
-      image: 'https://images.unsplash.com/photo-1557344252-4d5c9909579c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZWN5Y2xpbmclMjBwbGFzdGljJTIwYm90dGxlc3xlbnwxfHx8fDE3NjgxOTIxMjN8MA&ixlib=rb-4.1.0&q=80&w=1080'
-    }
-  ];
-
-  const acceptedRequests = requests.filter(r => r.status === 'accepted');
-  const assignedRequests: RequestItem[] = [
-    { ...requests[0], status: 'assigned', collector: 'Nguyễn Văn B' }
-  ];
-  const completedRequests: RequestItem[] = [
-    { ...requests[1], status: 'completed', completedTime: '10:30 12/01/2026' }
-  ];
-
-  const handleAccept = (requestId: string) => {
-    alert(`Đã chấp nhận yêu cầu ${requestId}`);
-  };
-
-  const handleReject = (requestId: string) => {
-    alert(`Đã từ chối yêu cầu ${requestId}`);
-  };
+  const pendingList = filtered.filter((r) => r.status === 'pending');
+  const acceptedList = filtered.filter((r) => r.status === 'accepted');
+  const rejectedList = filtered.filter((r) => r.status === 'rejected');
 
   const handleFilterChange = (key: keyof FiltersState, value: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleNavigateToDetail = (request: RequestItem) => {
+    onNavigate('request-detail', request);
   };
 
   return (
@@ -110,82 +120,67 @@ export function CollectionRequests({ onNavigate }: CollectionRequestsProps) {
 
       <FiltersBar filters={filters} onChange={handleFilterChange} />
 
-      {/* Tabs */}
-      <Tabs defaultValue="pending" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="pending">
-            🆕 Mới ({requests.filter(r => r.status === 'pending').length})
-          </TabsTrigger>
-          <TabsTrigger value="accepted">
-            ✅ Đã chấp nhận ({acceptedRequests.length})
-          </TabsTrigger>
-          <TabsTrigger value="assigned">
-            👷 Đã phân công ({assignedRequests.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            ✔️ Hoàn thành ({completedRequests.length})
-          </TabsTrigger>
-          <TabsTrigger value="rejected">
-            ❌ Từ chối (0)
-          </TabsTrigger>
-        </TabsList>
+      {loading && (
+        <div className="text-center py-12 text-gray-500">Đang tải...</div>
+      )}
+      {error && (
+        <div className="text-center py-12 text-red-500">{error}</div>
+      )}
 
-        <TabsContent value="pending" className="space-y-4">
-          {requests.filter(r => r.status === 'pending').map((request) => (
-            <RequestCard
-              key={request.id}
-              request={request}
-              onAccept={handleAccept}
-              onReject={handleReject}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </TabsContent>
+      {!loading && !error && (
+        <Tabs defaultValue="pending" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="pending">
+              🆕 Chờ phân công ({pendingList.length})
+            </TabsTrigger>
+            <TabsTrigger value="accepted">
+              👷 Đã phân công ({acceptedList.length})
+            </TabsTrigger>
+            <TabsTrigger value="rejected">
+              ❌ Từ chối ({rejectedList.length})
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="accepted" className="space-y-4">
-          {acceptedRequests.map((request) => (
-            <RequestCard
-              key={request.id}
-              request={request}
-              onAccept={handleAccept}
-              onReject={handleReject}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </TabsContent>
+          <TabsContent value="pending" className="space-y-4">
+            {pendingList.length === 0 && (
+              <div className="text-center py-12 text-gray-500">Không có yêu cầu mới</div>
+            )}
+            {pendingList.map((request) => (
+              <RequestCard
+                key={request.collectionReportID}
+                request={request}
+                onNavigate={() => handleNavigateToDetail(request)}
+              />
+            ))}
+          </TabsContent>
 
-        <TabsContent value="assigned" className="space-y-4">
-          {assignedRequests.map((request) => (
-            <RequestCard
-              key={request.id}
-              request={request}
-              showActions={false}
-              onAccept={handleAccept}
-              onReject={handleReject}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </TabsContent>
+          <TabsContent value="accepted" className="space-y-4">
+            {acceptedList.length === 0 && (
+              <div className="text-center py-12 text-gray-500">Chưa có yêu cầu nào được phân công</div>
+            )}
+            {acceptedList.map((request) => (
+              <RequestCard
+                key={request.collectionReportID}
+                request={request}
+                onNavigate={() => handleNavigateToDetail(request)}
+              />
+            ))}
+          </TabsContent>
 
-        <TabsContent value="completed" className="space-y-4">
-          {completedRequests.map((request) => (
-            <RequestCard
-              key={request.id}
-              request={request}
-              showActions={false}
-              onAccept={handleAccept}
-              onReject={handleReject}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </TabsContent>
-
-        <TabsContent value="rejected" className="space-y-4">
-          <div className="text-center py-12 text-gray-500">
-            Không có yêu cầu bị từ chối
-          </div>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="rejected" className="space-y-4">
+            {rejectedList.length === 0 && (
+              <div className="text-center py-12 text-gray-500">Không có yêu cầu bị từ chối</div>
+            )}
+            {rejectedList.map((request) => (
+              <RequestCard
+                key={request.collectionReportID}
+                request={request}
+                onNavigate={() => handleNavigateToDetail(request)}
+              />
+            ))}
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

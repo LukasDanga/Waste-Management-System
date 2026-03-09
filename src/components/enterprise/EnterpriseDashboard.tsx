@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { EnterpriseLayout } from './EnterpriseLayout';
-import { DashboardOverview } from './DashboardOverview/DashboardOverview';
+import { Analytics } from './Analytics/Analytics';
+import { CapacityManagement } from './CapacityManagement/CapacityManagement';
 import { CollectionRequests } from './CollectionRequests/CollectionRequests';
 import { RequestDetail } from './CollectionRequests/RequestDetail';
 import { CollectorManagement } from './CollectorManagement/CollectorManagement';
-import { CapacityManagement } from './CapacityManagement/CapacityManagement';
-import { Analytics } from './Analytics/Analytics';
+import { DashboardOverview } from './DashboardOverview/DashboardOverview';
+import { EnterpriseLayout } from './EnterpriseLayout';
 import { PointRules } from './PointRules/PointRules';
 import { Profile } from './Profile/Profile';
 
@@ -19,6 +19,7 @@ interface EnterpriseDashboardProps {
 export function EnterpriseDashboard({ companyData, onLogout }: EnterpriseDashboardProps) {
   const [currentSection, setCurrentSection] = useState<string>('dashboard');
   const [requestDetailData, setRequestDetailData] = useState<any>(null);
+  const [justAssignedId, setJustAssignedId] = useState<string | null>(null);
 
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
@@ -33,6 +34,10 @@ export function EnterpriseDashboard({ companyData, onLogout }: EnterpriseDashboa
     window.location.hash = `enterprise/${section}`;
     if (section === 'request-detail' && data) {
       setRequestDetailData(data);
+      setJustAssignedId(null);
+    }
+    if (section === 'requests' && data?.justAssignedId) {
+      setJustAssignedId(data.justAssignedId);
     }
   };
 
@@ -41,7 +46,7 @@ export function EnterpriseDashboard({ companyData, onLogout }: EnterpriseDashboa
       case 'dashboard':
         return <DashboardOverview onNavigate={handleNavigate} />;
       case 'requests':
-        return <CollectionRequests onNavigate={handleNavigate} />;
+        return <CollectionRequests onNavigate={handleNavigate} justAssignedId={justAssignedId} />;
       case 'request-detail':
         return <RequestDetail onNavigate={handleNavigate} requestData={requestDetailData} />;
       case 'collectors':
