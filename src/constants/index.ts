@@ -415,7 +415,7 @@ export const FEATURE_FLAGS = {
 // ==================== APP CONFIG ====================
 
 const viteApiBase = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_API_BASE_URL : undefined;
-const browserEnvApiBase = typeof window !== 'undefined' ? (window as any).ENV?.API_BASE_URL : undefined;
+const browserEnvApiBase = typeof window !== 'undefined' ? (window as any).ENV?.VITE_API_BASE_URL : undefined;
 const rawBaseUrl = viteApiBase || browserEnvApiBase || 'http://localhost:3000';
 const normalizedBaseUrl = rawBaseUrl.replace(/\/+$/, '');
 
