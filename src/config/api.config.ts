@@ -17,7 +17,7 @@ const getEnv = (key: string, defaultValue: string = ''): string => {
 
 export const API_CONFIG = {
   // Base URL
-  BASE_URL: getEnv('VITE_API_BASE_URL', getEnv('API_BASE_URL', 'http://localhost:3000/api')),
+  BASE_URL: getEnv('VITE_API_BASE_URL', 'http://localhost:3000/api'),
   IMAGE_BASE_URL: getEnv('VITE_IMAGE_BASE_URL', ''),
   
   // Timeout

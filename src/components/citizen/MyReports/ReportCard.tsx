@@ -22,13 +22,17 @@ const WASTE_LABELS: Record<string, { emoji: string; label: string }> = {
 
 const FALLBACK_REMOTE = 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=400&q=80';
 
-const getImageBase = () => (API_CONFIG.IMAGE_BASE_URL || API_CONFIG.BASE_URL || '').replace(/\/$/, '');
+const getImageBase = () => {
+  const base = API_CONFIG.IMAGE_BASE_URL || API_CONFIG.BASE_URL || '';
+  return base.replace(/\/+$/, '');
+};
 
 const resolveImageUrl = (imageName?: string) => {
   const base = getImageBase();
-  if (!imageName) return base ? `${base}/images/placeholder.webp` : FALLBACK_REMOTE;
+  if (!base) return FALLBACK_REMOTE;
+  if (!imageName) return `${base}/placeholder.webp`;
   if (/^https?:\/\//i.test(imageName)) return imageName;
-  return base ? `${base}/images/${imageName}` : FALLBACK_REMOTE;
+  return `${base}/${imageName}`;
 };
 
 const formatDate = (dateString?: string) => {
