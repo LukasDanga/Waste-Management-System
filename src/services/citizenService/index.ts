@@ -58,6 +58,15 @@ export interface CitizenProfileResponse {
   rewardHistories: any[];
 }
 
+export interface ProfilePagingParams {
+  CollectionReportPageIndex?: number;
+  CollectionReportPageSize?: number;
+  ComplaintReportPageIndex?: number;
+  ComplaintReportPageSize?: number;
+  RewardHistoryPageIndex?: number;
+  RewardHistoryPageSize?: number;
+}
+
 export interface ComplaintReportRequest {
   collectionReportID: string;
   title: string;
@@ -193,8 +202,25 @@ export async function fetchCitizenReports(params?: { regionCode?: string; wasteT
   return list as CitizenReportItem[];
 }
 
-export async function fetchCitizenProfile(): Promise<CitizenProfileResponse> {
-  const res = await fetch(`${API_CONFIG.BASE_URL}/citizen/citizens/my-profile`, {
+export async function fetchCitizenProfile(params?: ProfilePagingParams): Promise<CitizenProfileResponse> {
+  const query = new URLSearchParams();
+  const defaults: ProfilePagingParams = {
+    CollectionReportPageIndex: 0,
+    CollectionReportPageSize: 10,
+    ComplaintReportPageIndex: 0,
+    ComplaintReportPageSize: 10,
+    RewardHistoryPageIndex: 0,
+    RewardHistoryPageSize: 10,
+  };
+
+  const finalParams = { ...defaults, ...params };
+  Object.entries(finalParams).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) query.set(key, String(value));
+  });
+
+  const url = `${API_CONFIG.BASE_URL}/citizen/citizens/my-profile${query.toString() ? `?${query.toString()}` : ''}`;
+
+  const res = await fetch(url, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
