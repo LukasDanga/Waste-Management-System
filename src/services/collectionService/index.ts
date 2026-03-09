@@ -42,12 +42,12 @@ export async function getMyCollectionTasks(
   params: GetMyCollectionTasksParams,
 ): Promise<MyCollectionTasksResponse> {
   const query = new URLSearchParams();
+  query.set("SortBy", params.SortBy ?? "");
   query.set("PageIndex", String(params.PageIndex));
   query.set("PageLength", String(params.PageLength));
-  if (params.SortBy) query.set("SortBy", params.SortBy);
-  if (params.AssignedAt) query.set("AssignedAt", params.AssignedAt);
-  if (params.StartAt) query.set("StartAt", params.StartAt);
-  if (params.Status) query.set("Status", params.Status);
+  query.set("AssignedAt", params.AssignedAt ?? "");
+  query.set("StartAt", params.StartAt ?? "");
+  query.set("Status", params.Status ?? "");
 
   const res = await fetch(
     `${API_CONFIG.BASE_URL}/collection/collections/my-collection-task?${query.toString()}`,
@@ -62,9 +62,18 @@ export async function getMyCollectionTasks(
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(
-      error?.message || `Request failed with status ${res.status}`,
-    );
+    const msg: string = error?.message ?? "";
+    if (
+      res.status === 500 &&
+      msg.toLowerCase().includes("not found or empty")
+    ) {
+      return {
+        success: true,
+        payload: [],
+        timestamp: new Date().toISOString(),
+      };
+    }
+    throw new Error(msg || `Request failed with status ${res.status}`);
   }
 
   return res.json();

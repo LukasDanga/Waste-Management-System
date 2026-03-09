@@ -223,8 +223,18 @@ export function RequestDetail({ onNavigate, requestData }: RequestDetailProps) {
                             >
                               <RadioGroupItem value={member.userID} id={member.memberID} className="mt-1" />
                               <div className="flex-1">
-                                <p className="font-semibold text-sm font-mono">{member.userID.slice(0, 16)}…</p>
-                                <p className="text-xs text-gray-500 mt-1">Tham gia: {formatDate(member.assignedAt)}</p>
+                                <p className="font-semibold text-sm">{member.userInformation.fullName}</p>
+                                <p className="text-xs text-gray-500">{member.userInformation.email}</p>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {member.userInformation.gender === 'Male' ? '👨' : '👩'} {member.userInformation.gender === 'Male' ? 'Nam' : 'Nữ'}
+                                  {' · '}
+                                  {member.userInformation.isActive ? (
+                                    <span className="text-green-600">Đang hoạt động</span>
+                                  ) : (
+                                    <span className="text-red-500">Không hoạt động</span>
+                                  )}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-0.5">Tham gia: {formatDate(member.assignedAt)}</p>
                               </div>
                             </label>
                           ))}
