@@ -10,7 +10,7 @@ import {
   type CitizenReportItem,
 } from '../../../services/citizenService';
 import type { CitizenProfileData, TabKey } from './types';
-import { MapPin, X, MessageSquare, UploadCloud } from 'lucide-react';
+import { MapPin, X, MessageSquare, UploadCloud, Camera, Clock4 } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 
@@ -30,11 +30,36 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'rewardHistories', label: 'Lịch sử thưởng' },
 ];
 
+const PAGE_SIZE = {
+  collection: 10,
+  complaint: 10,
+  reward: 10,
+};
+
+const formatDateTime = (value?: string) => {
+  if (!value) return 'Chưa xác định';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Chưa xác định';
+  const d = date.toLocaleDateString('vi-VN');
+  const t = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${d} ${t}`;
+};
+
 export function MyReports({ onNavigate }: MyReportsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('collectionReports');
   const [profile, setProfile] = useState<CitizenProfileData>(DEFAULT_PROFILE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pages, setPages] = useState({
+    collection: 0,
+    complaint: 0,
+    reward: 0,
+  });
+  const [pageLengths, setPageLengths] = useState({
+    collection: 0,
+    complaint: 0,
+    reward: 0,
+  });
   const [locationModal, setLocationModal] = useState({
     open: false,
     lat: 0,
@@ -49,20 +74,37 @@ export function MyReports({ onNavigate }: MyReportsProps) {
   const [complaintForm, setComplaintForm] = useState({
     title: '',
     description: '',
-    imageUrl: '',
     imageFile: null as File | null,
+    imageName: '',
+    uploading: false,
     submitting: false,
   });
 
-  const loadProfile = async () => {
+  const loadProfile = async (overridePages?: Partial<typeof pages>) => {
+    const mergedPages = { ...pages, ...overridePages };
+    if (overridePages) {
+      setPages(mergedPages);
+    }
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchCitizenProfile();
+      const data = await fetchCitizenProfile({
+        CollectionReportPageIndex: mergedPages.collection,
+        CollectionReportPageSize: PAGE_SIZE.collection,
+        ComplaintReportPageIndex: mergedPages.complaint,
+        ComplaintReportPageSize: PAGE_SIZE.complaint,
+        RewardHistoryPageIndex: mergedPages.reward,
+        RewardHistoryPageSize: PAGE_SIZE.reward,
+      });
       setProfile({
         collectionReports: data.collectionReports || [],
         complaintReports: data.complaintReports || [],
         rewardHistories: data.rewardHistories || [],
+      });
+      setPageLengths({
+        collection: data.collectionReports?.length || 0,
+        complaint: data.complaintReports?.length || 0,
+        reward: data.rewardHistories?.length || 0,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không tải được dữ liệu');
@@ -74,6 +116,15 @@ export function MyReports({ onNavigate }: MyReportsProps) {
   useEffect(() => {
     loadProfile();
   }, []);
+
+  const changePage = (tab: 'collection' | 'complaint' | 'reward', delta: number) => {
+    setPages((prev) => {
+      const next = Math.max(0, prev[tab] + delta);
+      const merged = { ...prev, [tab]: next } as typeof prev;
+      loadProfile(merged);
+      return merged;
+    });
+  };
 
   const renderCollectionReports = () => {
     if (loading) return <Card className="p-6 text-gray-600">Đang tải báo cáo...</Card>;
@@ -118,8 +169,9 @@ export function MyReports({ onNavigate }: MyReportsProps) {
       setComplaintForm({
         title: 'Khiếu nại về báo cáo',
         description: '',
-        imageUrl: '',
         imageFile: null,
+        imageName: '',
+        uploading: false,
         submitting: false,
       });
       setComplaintModal({ open: true, report });
@@ -136,6 +188,110 @@ export function MyReports({ onNavigate }: MyReportsProps) {
             onViewComplaint={handleViewComplaint}
           />
         ))}
+        <div className="flex items-center justify-end gap-3 pt-3">
+          <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 shadow-sm">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => changePage('collection', -1)}
+              disabled={pages.collection === 0 || loading}
+              className="h-8 px-2 text-sm"
+            >
+              ← Trước
+            </Button>
+            <span className="text-sm font-semibold text-gray-700">Trang {pages.collection + 1}</span>
+            {pageLengths.collection >= PAGE_SIZE.collection && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => changePage('collection', 1)}
+                disabled={loading}
+                className="h-8 px-2 text-sm"
+              >
+                Sau →
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRewardHistories = () => {
+    if (loading) return <Card className="p-6 text-gray-600">Đang tải lịch sử thưởng...</Card>;
+    if (error)
+      return (
+        <Card className="p-6 text-red-600 space-y-3">
+          <div>{error}</div>
+          <button
+            type="button"
+            className="text-sm text-emerald-700 font-semibold"
+            onClick={loadProfile}
+          >
+            Thử lại
+          </button>
+        </Card>
+      );
+    if (!profile.rewardHistories.length) {
+      return <Card className="p-6 text-gray-600">Chưa có dữ liệu thưởng</Card>;
+    }
+
+    return (
+      <div className="space-y-3">
+        {profile.rewardHistories.map((item: any) => (
+          <Card key={item.rewardHistoryID || `${item.occurredAt}-${item.point}`} className="p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold">
+                    +{item.point ?? 0}
+                  </div>
+                  <div className="text-sm text-gray-800 font-semibold">
+                    {item.reason || 'Không có mô tả'}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Clock4 className="h-4 w-4 text-emerald-600" />
+                  <span>{formatDateTime(item.occurredAt)}</span>
+                </div>
+                {item.citizenArea?.name && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <MapPin className="h-4 w-4 text-emerald-600" />
+                    <span>{item.citizenArea.name}</span>
+                  </div>
+                )}
+              </div>
+              <div className="text-xs text-gray-500">
+                {item.rewardHistoryID ? `Mã: ${item.rewardHistoryID}` : ''}
+              </div>
+            </div>
+          </Card>
+        ))}
+        <div className="flex items-center justify-end gap-3 pt-3">
+          <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 shadow-sm">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => changePage('reward', -1)}
+              disabled={pages.reward === 0 || loading}
+              className="h-8 px-2 text-sm"
+            >
+              ← Trước
+            </Button>
+            <span className="text-sm font-semibold text-gray-700">Trang {pages.reward + 1}</span>
+            {pageLengths.reward >= PAGE_SIZE.reward && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => changePage('reward', 1)}
+                disabled={loading}
+                className="h-8 px-2 text-sm"
+              >
+                Sau →
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
@@ -146,13 +302,31 @@ export function MyReports({ onNavigate }: MyReportsProps) {
 
   const renderContent = () => {
     if (activeTab === 'collectionReports') return renderCollectionReports();
-    if (activeTab === 'complaintReports') return renderPlaceholder('Tính năng đang phát triển cho khiếu nại');
-    return renderPlaceholder('Tính năng đang phát triển cho lịch sử thưởng');
+    if (activeTab === 'complaintReports') return renderPlaceholder('Chưa có dữ liệu khiếu nại');
+    return renderRewardHistories();
+  };
+
+  const handleUploadComplaintImage = async () => {
+    if (!complaintForm.imageFile) {
+      toast.error('Vui lòng chọn ảnh từ thiết bị trước.');
+      return;
+    }
+
+    setComplaintForm((f) => ({ ...f, uploading: true }));
+    try {
+      const imageName = await uploadReportImage(complaintForm.imageFile);
+      setComplaintForm((f) => ({ ...f, imageName }));
+      toast.success('Tải ảnh thành công');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Tải ảnh thất bại');
+    } finally {
+      setComplaintForm((f) => ({ ...f, uploading: false }));
+    }
   };
 
   const closeComplaintModal = () => {
     setComplaintModal({ open: false });
-    setComplaintForm({ title: '', description: '', imageUrl: '', imageFile: null, submitting: false });
+    setComplaintForm({ title: '', description: '', imageFile: null, imageName: '', uploading: false, submitting: false });
   };
 
   const handleComplaintSubmit = async (e: FormEvent) => {
@@ -164,30 +338,24 @@ export function MyReports({ onNavigate }: MyReportsProps) {
 
     const title = complaintForm.title.trim();
     const description = complaintForm.description.trim();
-    const url = complaintForm.imageUrl.trim();
 
     if (!title || !description) {
       toast.error('Vui lòng nhập tiêu đề và nội dung khiếu nại');
       return;
     }
 
-    if (!complaintForm.imageFile && !url) {
-      toast.error('Vui lòng chọn ảnh hoặc nhập URL ảnh');
+    if (!complaintForm.imageName) {
+      toast.error('Vui lòng tải ảnh trước khi gửi');
       return;
     }
 
     setComplaintForm((f) => ({ ...f, submitting: true }));
     try {
-      let imageName = url;
-      if (complaintForm.imageFile) {
-        imageName = await uploadReportImage(complaintForm.imageFile, 'ComplaintReport');
-      }
-
       await createComplaintReport({
         collectionReportID: complaintModal.report.collectionReportID,
         title,
         description,
-        imageName,
+        imageName: complaintForm.imageName,
       });
 
       toast.success('Đã gửi khiếu nại thành công');
@@ -322,34 +490,60 @@ export function MyReports({ onNavigate }: MyReportsProps) {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-semibold text-gray-800">Ảnh minh chứng</label>
-                  <span className="text-xs text-gray-500">Chọn một trong hai cách</span>
+                  <span className="text-xs text-gray-500">Chỉ hỗ trợ tải ảnh từ thiết bị</span>
                 </div>
-                <Input
-                  value={complaintForm.imageUrl}
-                  onChange={(e) => setComplaintForm((f) => ({ ...f, imageUrl: e.target.value, imageFile: null }))}
-                  placeholder="Dán URL ảnh (tùy chọn)"
-                  disabled={complaintForm.submitting}
-                />
-                <div className="flex items-center gap-3">
-                  <label className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
-                    <UploadCloud className="w-4 h-4 text-emerald-600" />
-                    <span>Chọn tệp</span>
+                <div className="rounded-lg border border-dashed border-gray-300 p-4 space-y-3 bg-gray-50">
+                  <label
+                    htmlFor="complaint-image-upload"
+                    className="flex items-center justify-between gap-3 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 shadow-sm">
+                        <Camera className="w-4 h-4 text-emerald-700" />
+                        <span className="text-sm font-semibold text-emerald-800">Chọn ảnh</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs text-gray-600">Hỗ trợ JPG, PNG. Dung lượng tối đa 5MB</p>
+                      </div>
+                    </div>
                     <input
+                      id="complaint-image-upload"
                       type="file"
                       accept="image/*"
-                      disabled={complaintForm.submitting}
+                      disabled={complaintForm.submitting || complaintForm.uploading}
                       onChange={(e) => {
                         const file = e.target.files?.[0] || null;
-                        setComplaintForm((f) => ({ ...f, imageFile: file, imageUrl: file ? '' : f.imageUrl }));
+                        setComplaintForm((f) => ({ ...f, imageFile: file, imageName: '' }));
                       }}
                       className="hidden"
                     />
                   </label>
-                  {complaintForm.imageFile && (
-                    <span className="text-sm text-gray-600">Đã chọn: {complaintForm.imageFile.name}</span>
+
+                  <div className="flex flex-wrap items-center gap-3 justify-between text-sm">
+                    <div className="text-gray-700">
+                      {complaintForm.imageFile ? `Đã chọn: ${complaintForm.imageFile.name}` : 'Chưa chọn file'}
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleUploadComplaintImage}
+                      disabled={complaintForm.uploading || complaintForm.submitting}
+                      className="h-9 w-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center"
+                    >
+                      {complaintForm.uploading ? (
+                        <span className="text-xs font-semibold">...</span>
+                      ) : (
+                        <UploadCloud className="w-5 h-5" />
+                      )}
+                    </Button>
+                  </div>
+
+                  {complaintForm.imageName && (
+                    <div className="text-sm text-emerald-700 font-medium">
+                      Đã tải lên: {complaintForm.imageName}
+                    </div>
                   )}
                 </div>
               </div>

@@ -35,7 +35,9 @@ const formatDate = (dateString?: string) => {
   if (!dateString) return 'Chưa xác định';
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return 'Chưa xác định';
-  return date.toLocaleDateString('vi-VN');
+  const d = date.toLocaleDateString('vi-VN');
+  const t = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${d} ${t}`;
 };
 
 export function ReportCard({ report, onClick, onViewLocation, onViewComplaint }: ReportCardProps) {
