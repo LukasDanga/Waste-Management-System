@@ -13,9 +13,12 @@ interface StepDetailsProps {
   onBack: () => void;
   onSubmit: () => void;
   submitting?: boolean;
+  onUploadImage: () => void;
+  uploadingImage?: boolean;
+  uploadedImageName?: string;
 }
 
-export function StepDetails({ formData, onChange, onBack, onSubmit, submitting }: StepDetailsProps) {
+export function StepDetails({ formData, onChange, onBack, onSubmit, submitting, onUploadImage, uploadingImage, uploadedImageName }: StepDetailsProps) {
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState('');
   const [addressLoading, setAddressLoading] = useState(false);
@@ -161,10 +164,38 @@ export function StepDetails({ formData, onChange, onBack, onSubmit, submitting }
         )}
 
         <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600">
-          <div className="font-semibold text-gray-800 mb-2">Thông tin hình ảnh</div>
-          <div className="flex items-center justify-between">
-            <span>Tên file:</span>
-            <span className="font-medium">{formData.imageName || 'Chưa chọn file'}</span>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="font-semibold text-gray-800">Thông tin hình ảnh</div>
+            <Button
+              type="button"
+              onClick={onUploadImage}
+              disabled={uploadingImage}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 h-9 w-9 p-0 flex items-center justify-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" x2="12" y1="3" y2="15" />
+              </svg>
+            </Button>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between gap-3">
+              <span>Tên file:</span>
+              <span className="font-medium">{formData.imageName || 'Chưa chọn file'}</span>
+            </div>
+            <div className="text-sm text-gray-500">
+              {uploadingImage ? 'Đang tải ảnh...' : ''}
+            </div>
           </div>
         </div>
 
