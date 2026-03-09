@@ -1,7 +1,8 @@
-import { ArrowLeft, Calendar, CheckCircle, Clock, Hash, Upload, User } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle, Clock, Hash, Loader2, Upload, User } from 'lucide-react';
 import { useState } from 'react';
 import { API_CONFIG } from '../../../config/api.config';
 import { useToast } from '../../../hooks/useToast';
+import { uploadReportImage } from '../../../services/citizenService';
 import { submitProof } from '../../../services/collectionService';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
@@ -32,16 +33,25 @@ export function TaskDetail({ taskId, task, onNavigate }: TaskDetailProps) {
   const [note, setNote] = useState(task?.note ?? '');
   const [proofImageName, setProofImageName] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { success: toastSuccess, error: toastError } = useToast();
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setProofFile(file);
-      // imageName should come from media service upload (/image/images).
-      // Using filename as placeholder until media service is integrated.
-      setProofImageName(file.name);
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    setProofFile(file);
+    setProofImageName('');
+    try {
+      setUploading(true);
+      const name = await uploadReportImage(file, 'CollectionReport');
+      setProofImageName(name);
+      toastSuccess('Tải ảnh lên thành công');
+    } catch (err: any) {
+      toastError(err?.message || 'Tải ảnh lên thất bại');
+      setProofFile(null);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -129,9 +139,11 @@ export function TaskDetail({ taskId, task, onNavigate }: TaskDetailProps) {
                 alt="Proof"
                 className="w-full h-64 object-cover rounded-lg bg-gray-100"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  (e.currentTarget as HTMLImageElement).src =
+                    'https://placehold.co/600x300?text=Không+tải+được+ảnh';
                 }}
               />
+              <p className="text-xs text-gray-400 mt-2 truncate">{task.imageName}</p>
             </div>
           )}
 
@@ -248,11 +260,22 @@ export function TaskDetail({ taskId, task, onNavigate }: TaskDetailProps) {
                       id="proof-image"
                     />
                     <label htmlFor="proof-image" className="cursor-pointer">
-                      {proofFile ? (
+                      {uploading ? (
+                        <div>
+                          <Loader2 className="w-10 h-10 text-green-600 mx-auto mb-2 animate-spin" />
+                          <p className="text-sm text-green-600">Đang tải ảnh lên...</p>
+                        </div>
+                      ) : proofFile && proofImageName ? (
                         <div>
                           <Upload className="w-10 h-10 text-green-600 mx-auto mb-2" />
                           <p className="text-sm text-green-600 font-medium">{proofFile.name}</p>
-                          <p className="text-xs text-gray-400 mt-1">Click để chọn ảnh khác</p>
+                          <p className="text-xs text-gray-400 mt-1">✅ Đã upload • Click để chọn ảnh khác</p>
+                        </div>
+                      ) : proofFile && !proofImageName ? (
+                        <div>
+                          <Upload className="w-10 h-10 text-red-400 mx-auto mb-2" />
+                          <p className="text-sm text-red-500">{proofFile.name}</p>
+                          <p className="text-xs text-gray-400 mt-1">Upload thất bại • Click để thử lại</p>
                         </div>
                       ) : (
                         <div>
@@ -263,9 +286,7 @@ export function TaskDetail({ taskId, task, onNavigate }: TaskDetailProps) {
                       )}
                     </label>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    * imageName sẽ được lấy từ media service sau khi upload
-                  </p>
+
                 </div>
 
                 {/* Actual Amount */}
@@ -306,7 +327,7 @@ export function TaskDetail({ taskId, task, onNavigate }: TaskDetailProps) {
                 <div className="flex gap-3">
                   <button
                     onClick={handleSubmitProof}
-                    disabled={submitting}
+                    disabled={submitting || uploading}
                     className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                   >
                     {submitting ? 'Đang nộp...' : '✅ Nộp bằng chứng'}
