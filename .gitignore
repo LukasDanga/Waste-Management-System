@@ -1,17 +1,3 @@
-còn của testOrder với patient nữa .
-để lấn qua cái đó làm .
-tui làm cái đó xog ông chuyển thư mục như anh minh nói giúp tui nha .
-Oke
-
-tui lên kindred 3 chưa kịp đánh nó gg mất ông bùn vãi :(( .
-alo khang ei
-vô discord de
-cần help
-oke :)).
-mà gửi meet đi ông .
-lag quá ko vào dis đc.
-https://meet.google.com/tvx-sftz-ece
-vô meet lại đi
 # Logs
 logs
 *.log
@@ -26,6 +12,8 @@ dist
 dist-ssr
 *.local
 
+.env
+.env.example
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

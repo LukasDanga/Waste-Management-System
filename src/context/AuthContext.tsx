@@ -12,7 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (username: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
+  login: (email: string, password: string, roleCode?: UserRole) => Promise<{ success: boolean; user?: User; error?: string }>;
   logout: () => Promise<{ success: boolean; error?: string }>;
   updateUser: (userData: Partial<User>) => void;
   hasRole: (role: UserRole | UserRole[]) => boolean;

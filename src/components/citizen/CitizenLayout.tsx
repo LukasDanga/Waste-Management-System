@@ -36,7 +36,6 @@ export function CitizenLayout({
     { id: 'my-reports', label: 'Báo cáo của tôi', icon: FileText },
     { id: 'points', label: 'Điểm thưởng', icon: Gift },
     { id: 'leaderboard', label: 'Bảng xếp hạng', icon: Trophy },
-    { id: 'feedback', label: 'Phản hồi/Khiếu nại', icon: MessageSquare },
     { id: 'profile', label: 'Hồ sơ', icon: User }
   ];
 

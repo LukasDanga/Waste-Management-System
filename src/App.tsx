@@ -2,20 +2,23 @@ import { useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { Homepage } from './components/Homepage';
 import { LoginPage } from './components/LoginPage';
-import { CitizenDashboard } from './components/CitizenDashboard';
-import { EnterpriseDashboard } from './components/EnterpriseDashboard';
-import { CollectorDashboard } from './components/CollectorDashboard';
+import { RegisterPage } from './components/RegisterPage';
+import { CitizenDashboard } from './components/citizen/CitizenDashboard';
+import { EnterpriseDashboard } from './components/enterprise/EnterpriseDashboard';
+import { CollectorDashboard } from './components/collector/CollectorDashboard';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import './i18n/config';
+import { STORAGE_KEYS } from './constants';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'login'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'login' | 'register'>('home');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ username: string; role: string; name: string; points: number } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ email: string; role: string; name: string; points: number } | null>(null);
 
-  const pageFromHash = (hash: string): 'home' | 'login' => {
+  const pageFromHash = (hash: string): 'home' | 'login' | 'register' => {
     const value = hash.replace('#', '').trim().toLowerCase();
     if (value === 'login') return 'login';
+    if (value === 'register') return 'register';
     return 'home';
   };
 
@@ -41,32 +44,34 @@ export default function App() {
   }, []);
 
   const handleNavigate = (page: string) => {
-    const safePage = page === 'login' ? 'login' : 'home';
+    const safePage = page === 'login' || page === 'register' ? page : 'home';
     setCurrentPage(safePage);
     window.location.hash = safePage;
   };
 
-  const handleLogin = (username: string, role: string) => {
+  const handleLogin = (user: { email: string; role: string; name?: string }) => {
     setIsLoggedIn(true);
     
     const userData = {
-      username,
-      role,
-      name: role === 'CITIZEN' ? 'Nguyễn Văn A' : 
-            role === 'ENTERPRISE' ? 'Green Recycle Co.' :
-            role === 'COLLECTOR' ? 'Nguyễn Văn B' :
-            role === 'ADMIN' ? 'Admin User' :
-            'Unknown User',
+      email: user.email,
+      role: user.role,
+      name: user.name || (
+        user.role === 'CITIZEN' ? 'Nguyễn Văn A' : 
+        user.role === 'ENTERPRISE' ? 'Green Recycle Co.' :
+        user.role === 'COLLECTOR' ? 'Nguyễn Văn B' :
+        user.role === 'SUPER_ADMIN' ? 'Super Admin' :
+        'Unknown User'
+      ),
       points: 2350
     };
     
     setCurrentUser(userData);
-    const roleKey = role.toLowerCase();
+    const roleKey = userData.role.toLowerCase();
     const defaultSection =
       roleKey === 'citizen' ? 'dashboard' :
       roleKey === 'enterprise' ? 'dashboard' :
       roleKey === 'collector' ? 'overview' :
-      roleKey === 'admin' ? 'overview' : 'dashboard';
+      roleKey === 'super_admin' ? 'overview' : 'dashboard';
     window.location.hash = `${roleKey}/${defaultSection}`;
     localStorage.setItem('authState', JSON.stringify({ isLoggedIn: true, currentUser: userData }));
   };
@@ -77,6 +82,9 @@ export default function App() {
     setCurrentPage('home');
     window.location.hash = 'home';
     localStorage.removeItem('authState');
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER_DATA);
   };
 
   // Show appropriate dashboard based on role
@@ -108,7 +116,7 @@ export default function App() {
       );
     }
     
-    if (currentUser.role === 'ADMIN') {
+    if (currentUser.role === 'SUPER_ADMIN') {
       return (
         <AdminDashboard
           adminData={{ name: currentUser.name }}
@@ -138,7 +146,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      {currentPage !== 'login' && (
+      {currentPage !== 'login' && currentPage !== 'register' && (
         <Header 
           isLoggedIn={isLoggedIn}
           currentPage={currentPage}
@@ -147,7 +155,18 @@ export default function App() {
       )}
       
       {currentPage === 'home' && <Homepage onNavigate={handleNavigate} />}
-      {currentPage === 'login' && <LoginPage onLogin={handleLogin} />}
+      {currentPage === 'login' && (
+        <LoginPage 
+          onLogin={handleLogin}
+          onNavigateToRegister={() => handleNavigate('register')}
+        />
+      )}
+      {currentPage === 'register' && (
+        <RegisterPage 
+          onRegister={() => handleNavigate('login')} 
+          onBackToLogin={() => handleNavigate('login')} 
+        />
+      )}
     </div>
   );
 }

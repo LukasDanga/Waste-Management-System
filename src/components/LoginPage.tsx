@@ -1,13 +1,18 @@
 import { useState } from 'react';
-import { Eye, EyeOff, User, Lock, Recycle, Users, Building2, Truck, Settings, ArrowRight } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { useToast, toastMessages } from '../hooks/useToast';
+import type { UserRole } from '../types';
+import { Eye, EyeOff, User, Lock, Recycle, Users, Building2, Settings, ArrowRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Checkbox } from './ui/checkbox';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface LoginPageProps {
-  onLogin: (username: string, role: string) => void;
+  onLogin: (user: { email: string; role: string; name?: string }) => void;
+  onNavigateToRegister?: () => void;
 }
 
 interface DemoAccount {
@@ -19,11 +24,16 @@ interface DemoAccount {
   color: string;
 }
 
-export function LoginPage({ onLogin }: LoginPageProps) {
+export function LoginPage({ onLogin, onNavigateToRegister }: LoginPageProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('CITIZEN');
+  const auth = useAuth();
+  const { error: toastError } = useToast();
 
   const demoAccounts: DemoAccount[] = [
     {
@@ -43,19 +53,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       color: 'bg-green-50 border-green-200 hover:bg-green-100'
     },
     {
-      icon: Truck,
-      role: 'COLLECTOR',
-      roleDisplay: 'Nhân viên thu gom',
-      username: 'collector_demo',
-      password: 'collector123',
-      color: 'bg-orange-50 border-orange-200 hover:bg-orange-100'
-    },
-    {
       icon: Settings,
-      role: 'ADMIN',
-      roleDisplay: 'Quản trị viên',
-      username: 'admin_demo',
-      password: 'admin123',
+      role: 'SUPER_ADMIN',
+      roleDisplay: 'Quản trị viên cấp cao',
+      username: 'longdong32120@gmail.com',
+      password: '280120051',
       color: 'bg-purple-50 border-purple-200 hover:bg-purple-100'
     }
   ];
@@ -63,15 +65,31 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const handleAutoFill = (account: DemoAccount) => {
     setUsername(account.username);
     setPassword(account.password);
+    setSelectedRole(account.role as UserRole);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
     if (username && password) {
-      // Find the role based on username
+      // Find the role based on username (demo accounts) or fallback to citizen
       const account = demoAccounts.find(acc => acc.username === username);
-      onLogin(username, account?.role || 'CITIZEN');
+      const roleCode = (account?.role || selectedRole || 'CITIZEN') as UserRole;
+
+      const result = await auth.login(username, password, selectedRole || roleCode);
+
+      if (result.success && result.user) {
+        onLogin({ email: result.user.email, role: result.user.role, name: result.user.name });
+        toastMessages.loginSuccess();
+      } else if (result.error) {
+        setError(result.error);
+        toastError(result.error);
+      }
     }
+
+    setIsSubmitting(false);
   };
 
   return (
@@ -154,12 +172,27 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 </div>
               </div>
 
+              {/* Role Select */}
+              <div className="space-y-2">
+                <label className="text-sm">Vai trò</label>
+                <Select value={selectedRole} onValueChange={(v: string) => setSelectedRole(v as UserRole)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn vai trò" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CITIZEN">Người dân</SelectItem>
+                    <SelectItem value="ENTERPRISE">Doanh nghiệp</SelectItem>
+                    <SelectItem value="SUPER_ADMIN">Quản trị viên</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Remember Me */}
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="remember"
                   checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  onCheckedChange={(checked: boolean) => setRememberMe(checked)}
                 />
                 <label htmlFor="remember" className="text-sm cursor-pointer">
                   Ghi nhớ đăng nhập
@@ -169,12 +202,29 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               {/* Submit Button */}
               <Button 
                 type="submit"
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
-                size="lg"
+                disabled={isSubmitting}
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4"
               >
-                Đăng nhập
+                {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </Button>
+
+              {error && (
+                <p className="text-sm text-red-600 text-center">{error}</p>
+              )}
             </form>
+
+            {/* Register Link */}
+            {typeof onNavigateToRegister === 'function' && (
+              <div className="text-center text-sm text-gray-600 mt-4 pt-4 border-t">
+                Chưa có tài khoản?{' '}
+                <button
+                  onClick={onNavigateToRegister}
+                  className="text-green-600 hover:text-green-700 font-semibold"
+                >
+                  Đăng ký ngay
+                </button>
+              </div>
+            )}
           </Card>
 
           {/* Demo Accounts */}
