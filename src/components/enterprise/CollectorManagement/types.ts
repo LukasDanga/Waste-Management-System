@@ -1,14 +1,18 @@
-export interface Collector {
-  id: number;
-  name: string;
+export interface UserInformation {
+  userID: string;
+  fullName: string;
   email: string;
-  phone: string;
-  vehicle: string;
-  licensePlate: string;
-  status: 'available' | 'busy';
-  statusLabel: string;
-  todayJobs: { completed: number; total: number };
-  weekJobs: number;
-  avatar: string;
-  joinDate: string;
+  gender: string;
+  dob: string;
+  isActive: boolean;
+  createdBy: string;
+}
+
+export interface EnterpriseMember {
+  memberID: string;
+  userID: string;
+  assignedAt: string;
+  unassignedAt: string;
+  enterpriseID: string;
+  userInformation: UserInformation;
 }
