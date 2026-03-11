@@ -1,86 +1,113 @@
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../ui/dialog';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { createRewardPolicy } from '../../../services/enterpriseService';
 import { Button } from '../../ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../ui/select';
 import type { PointRule } from './types';
 
 interface RuleFormDialogProps {
   open: boolean;
   editingRule: PointRule | null;
   onClose: () => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
 }
 
 export function RuleFormDialog({ open, editingRule, onClose, onSave }: RuleFormDialogProps) {
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    basePoint: '',
+  });
+
+  useEffect(() => {
+    if (!open) return;
+
+    setForm({
+      name: editingRule?.name || '',
+      description: editingRule?.condition || '',
+      basePoint: editingRule?.points ? String(editingRule.points) : '',
+    });
+  }, [open, editingRule]);
+
+  const handleSubmit = async () => {
+    if (!form.name.trim() || !form.description.trim() || !form.basePoint.trim()) {
+      toast.error('Vui lòng nhập đầy đủ tên, mô tả và điểm cơ bản');
+      return;
+    }
+
+    const basePoint = Number(form.basePoint);
+    if (!Number.isFinite(basePoint) || basePoint < 0) {
+      toast.error('Điểm cơ bản phải là số hợp lệ lớn hơn hoặc bằng 0');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await createRewardPolicy({
+        name: form.name.trim(),
+        description: form.description.trim(),
+        basePoint,
+      });
+      toast.success('Tạo chính sách điểm thưởng thành công');
+      await onSave();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Tạo chính sách điểm thưởng thất bại');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(isOpen : any) => (isOpen ? undefined : onClose())}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editingRule ? 'Chỉnh sửa quy tắc' : 'Thêm quy tắc mới'}</DialogTitle>
+          <DialogTitle>{editingRule ? 'Chỉnh sửa chính sách điểm thưởng' : 'Thêm chính sách điểm thưởng'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Tên quy tắc *</Label>
-            <Input placeholder="Nhập tên quy tắc..." defaultValue={editingRule?.name} className="bg-input-background" />
+            <Label>Tên chính sách *</Label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="Nhập tên chính sách..."
+              className="bg-input-background"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label>Loại rác *</Label>
-            <Select defaultValue={editingRule?.wasteType || 'all'}>
-              <SelectTrigger className="bg-input-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="organic">🌿 Rác hữu cơ</SelectItem>
-                <SelectItem value="recyclable">♻️ Rác tái chế</SelectItem>
-                <SelectItem value="hazardous">⚠️ Rác nguy hại</SelectItem>
-                <SelectItem value="general">🗑️ Rác thông thường</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Mô tả *</Label>
+            <Input
+              value={form.description}
+              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="Nhập mô tả chính sách..."
+              className="bg-input-background"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label>Điều kiện *</Label>
-            <Select defaultValue={editingRule ? 'custom' : 'default'}>
-              <SelectTrigger className="bg-input-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Mặc định</SelectItem>
-                <SelectItem value="weight_gt_5">Khối lượng {'>'} 5kg</SelectItem>
-                <SelectItem value="weight_gt_10">Khối lượng {'>'} 10kg</SelectItem>
-                <SelectItem value="ai_match">Khớp với AI</SelectItem>
-                <SelectItem value="photo_quality">Ảnh chất lượng cao</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Số điểm *</Label>
-            <Input type="number" placeholder="Nhập số điểm..." defaultValue={editingRule?.points} className="bg-input-background" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Áp dụng từ *</Label>
-            <Input type="date" defaultValue="2026-01-12" className="bg-input-background" />
+            <Label>Điểm cơ bản *</Label>
+            <Input
+              type="number"
+              min={0}
+              value={form.basePoint}
+              onChange={(e) => setForm((prev) => ({ ...prev, basePoint: e.target.value }))}
+              placeholder="Nhập điểm cơ bản..."
+              className="bg-input-background"
+            />
           </div>
         </div>
 
         <DialogFooter>
-          <Button onClick={onClose} className="border border-gray-200 text-gray-700 hover:bg-gray-100">
+          <Button onClick={onClose} disabled={submitting} className="border border-gray-200 text-gray-700 hover:bg-gray-100">
             Hủy
           </Button>
-          <Button onClick={onSave} className="bg-blue-600 hover:bg-blue-700">
-            Lưu
+          <Button onClick={handleSubmit} disabled={submitting} className="bg-blue-600 hover:bg-blue-700">
+            {submitting ? 'Đang lưu...' : 'Lưu'}
           </Button>
         </DialogFooter>
       </DialogContent>
