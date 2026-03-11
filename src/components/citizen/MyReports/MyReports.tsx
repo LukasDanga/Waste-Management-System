@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { toast } from 'sonner';
-import { Card } from '../../ui/card';
-import { ReportCard } from './ReportCard';
 import {
   createComplaintReport,
   fetchCitizenProfile,
   uploadReportImage,
   type CitizenReportItem,
 } from '../../../services/citizenService';
-import type { CitizenProfileData, TabKey } from './types';
-import { MapPin, X, MessageSquare, UploadCloud, Camera, Clock4 } from 'lucide-react';
+import type { CitizenProfileData, PaginationState, TabKey } from './types';
+import { PAGE_SIZE } from './types';
+import { X, MessageSquare, UploadCloud, Camera, MapPin } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
+import { CollectionReportsTab } from './CollectionReportsTab';
+import { ComplaintReportsTab } from './ComplaintReportsTab';
+import { RewardHistoriesTab } from './RewardHistoriesTab';
 
 interface MyReportsProps {
   onNavigate: (section: string, data?: any) => void;
@@ -30,32 +32,17 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'rewardHistories', label: 'Lịch sử thưởng' },
 ];
 
-const PAGE_SIZE = {
-  collection: 10,
-  complaint: 10,
-  reward: 10,
-};
-
-const formatDateTime = (value?: string) => {
-  if (!value) return 'Chưa xác định';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Chưa xác định';
-  const d = date.toLocaleDateString('vi-VN');
-  const t = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
-  return `${d} ${t}`;
-};
-
 export function MyReports({ onNavigate }: MyReportsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('collectionReports');
   const [profile, setProfile] = useState<CitizenProfileData>(DEFAULT_PROFILE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pages, setPages] = useState({
+  const [pages, setPages] = useState<PaginationState>({
     collection: 0,
     complaint: 0,
     reward: 0,
   });
-  const [pageLengths, setPageLengths] = useState({
+  const [pageLengths, setPageLengths] = useState<PaginationState>({
     collection: 0,
     complaint: 0,
     reward: 0,
@@ -80,7 +67,7 @@ export function MyReports({ onNavigate }: MyReportsProps) {
     submitting: false,
   });
 
-  const loadProfile = async (overridePages?: Partial<typeof pages>) => {
+  const loadProfile = async (overridePages?: Partial<PaginationState>) => {
     const mergedPages = { ...pages, ...overridePages };
     if (overridePages) {
       setPages(mergedPages);
@@ -126,184 +113,36 @@ export function MyReports({ onNavigate }: MyReportsProps) {
     });
   };
 
-  const renderCollectionReports = () => {
-    if (loading) return <Card className="p-6 text-gray-600">Đang tải báo cáo...</Card>;
-    if (error)
-      return (
-        <Card className="p-6 text-red-600 space-y-3">
-          <div>{error}</div>
-          <button
-            type="button"
-            className="text-sm text-emerald-700 font-semibold"
-            onClick={loadProfile}
-          >
-            Thử lại
-          </button>
-        </Card>
-      );
-    if (!profile.collectionReports.length) {
-      return <Card className="p-6 text-gray-600">Chưa có báo cáo thu gom</Card>;
-    }
-
-    const handleCardClick = (report: CitizenReportItem) => {
-      onNavigate?.('report-detail', report);
-      toast.info('Xem chi tiết sẽ được cập nhật sớm');
-    };
-
-    const handleViewLocation = async (report: CitizenReportItem) => {
-      setLocationModal({ open: true, lat: report.gps.latitude, lon: report.gps.longitude, address: '', loading: true, error: '' });
-      try {
-        const res = await fetch(
-          `https://geocode.maps.co/reverse?lat=${report.gps.latitude}&lon=${report.gps.longitude}&api_key=699d00d8ad6a6903279315xyoa5f1ca`
-        );
-        if (!res.ok) throw new Error('Không thể tra cứu địa chỉ');
-        const data = await res.json();
-        const name = data?.display_name || 'Không tìm thấy địa chỉ';
-        setLocationModal((m) => ({ ...m, address: name, loading: false }));
-      } catch (err) {
-        setLocationModal((m) => ({ ...m, error: err instanceof Error ? err.message : 'Lỗi tra cứu địa chỉ', loading: false }));
-      }
-    };
-
-    const handleViewComplaint = (report: CitizenReportItem) => {
-      setComplaintForm({
-        title: 'Khiếu nại về báo cáo',
-        description: '',
-        imageFile: null,
-        imageName: '',
-        uploading: false,
-        submitting: false,
-      });
-      setComplaintModal({ open: true, report });
-    };
-
-    return (
-      <div className="space-y-4">
-        {profile.collectionReports.map((report) => (
-          <ReportCard
-            key={report.collectionReportID}
-            report={report}
-            onClick={() => handleCardClick(report)}
-            onViewLocation={handleViewLocation}
-            onViewComplaint={handleViewComplaint}
-          />
-        ))}
-        <div className="flex items-center justify-end gap-3 pt-3">
-          <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 shadow-sm">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => changePage('collection', -1)}
-              disabled={pages.collection === 0 || loading}
-              className="h-8 px-2 text-sm"
-            >
-              ← Trước
-            </Button>
-            <span className="text-sm font-semibold text-gray-700">Trang {pages.collection + 1}</span>
-            {pageLengths.collection >= PAGE_SIZE.collection && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => changePage('collection', 1)}
-                disabled={loading}
-                className="h-8 px-2 text-sm"
-              >
-                Sau →
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  const handleCardClick = (report: CitizenReportItem) => {
+    onNavigate?.('report-detail', report);
+    toast.info('Xem chi tiết sẽ được cập nhật sớm');
   };
 
-  const renderRewardHistories = () => {
-    if (loading) return <Card className="p-6 text-gray-600">Đang tải lịch sử thưởng...</Card>;
-    if (error)
-      return (
-        <Card className="p-6 text-red-600 space-y-3">
-          <div>{error}</div>
-          <button
-            type="button"
-            className="text-sm text-emerald-700 font-semibold"
-            onClick={loadProfile}
-          >
-            Thử lại
-          </button>
-        </Card>
+  const handleViewLocation = async (report: CitizenReportItem) => {
+    setLocationModal({ open: true, lat: report.gps.latitude, lon: report.gps.longitude, address: '', loading: true, error: '' });
+    try {
+      const res = await fetch(
+        `https://geocode.maps.co/reverse?lat=${encodeURIComponent(report.gps.latitude)}&lon=${encodeURIComponent(report.gps.longitude)}&api_key=699d00d8ad6a6903279315xyoa5f1ca`
       );
-    if (!profile.rewardHistories.length) {
-      return <Card className="p-6 text-gray-600">Chưa có dữ liệu thưởng</Card>;
+      if (!res.ok) throw new Error('Không thể tra cứu địa chỉ');
+      const data = await res.json();
+      const name = data?.display_name || 'Không tìm thấy địa chỉ';
+      setLocationModal((m) => ({ ...m, address: name, loading: false }));
+    } catch (err) {
+      setLocationModal((m) => ({ ...m, error: err instanceof Error ? err.message : 'Lỗi tra cứu địa chỉ', loading: false }));
     }
-
-    return (
-      <div className="space-y-3">
-        {profile.rewardHistories.map((item: any) => (
-          <Card key={item.rewardHistoryID || `${item.occurredAt}-${item.point}`} className="p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold">
-                    +{item.point ?? 0}
-                  </div>
-                  <div className="text-sm text-gray-800 font-semibold">
-                    {item.reason || 'Không có mô tả'}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Clock4 className="h-4 w-4 text-emerald-600" />
-                  <span>{formatDateTime(item.occurredAt)}</span>
-                </div>
-                {item.citizenArea?.name && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <MapPin className="h-4 w-4 text-emerald-600" />
-                    <span>{item.citizenArea.name}</span>
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-gray-500">
-                {item.rewardHistoryID ? `Mã: ${item.rewardHistoryID}` : ''}
-              </div>
-            </div>
-          </Card>
-        ))}
-        <div className="flex items-center justify-end gap-3 pt-3">
-          <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 shadow-sm">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => changePage('reward', -1)}
-              disabled={pages.reward === 0 || loading}
-              className="h-8 px-2 text-sm"
-            >
-              ← Trước
-            </Button>
-            <span className="text-sm font-semibold text-gray-700">Trang {pages.reward + 1}</span>
-            {pageLengths.reward >= PAGE_SIZE.reward && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => changePage('reward', 1)}
-                disabled={loading}
-                className="h-8 px-2 text-sm"
-              >
-                Sau →
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
   };
 
-  const renderPlaceholder = (message: string) => (
-    <Card className="p-6 text-gray-600">{message}</Card>
-  );
-
-  const renderContent = () => {
-    if (activeTab === 'collectionReports') return renderCollectionReports();
-    if (activeTab === 'complaintReports') return renderPlaceholder('Chưa có dữ liệu khiếu nại');
-    return renderRewardHistories();
+  const handleViewComplaint = (report: CitizenReportItem) => {
+    setComplaintForm({
+      title: 'Khiếu nại về báo cáo',
+      description: '',
+      imageFile: null,
+      imageName: '',
+      uploading: false,
+      submitting: false,
+    });
+    setComplaintModal({ open: true, report });
   };
 
   const handleUploadComplaintImage = async () => {
@@ -311,7 +150,6 @@ export function MyReports({ onNavigate }: MyReportsProps) {
       toast.error('Vui lòng chọn ảnh từ thiết bị trước.');
       return;
     }
-
     setComplaintForm((f) => ({ ...f, uploading: true }));
     try {
       const imageName = await uploadReportImage(complaintForm.imageFile);
@@ -335,20 +173,16 @@ export function MyReports({ onNavigate }: MyReportsProps) {
       toast.error('Không xác định được báo cáo để khiếu nại');
       return;
     }
-
     const title = complaintForm.title.trim();
     const description = complaintForm.description.trim();
-
     if (!title || !description) {
       toast.error('Vui lòng nhập tiêu đề và nội dung khiếu nại');
       return;
     }
-
     if (!complaintForm.imageName) {
       toast.error('Vui lòng tải ảnh trước khi gửi');
       return;
     }
-
     setComplaintForm((f) => ({ ...f, submitting: true }));
     try {
       await createComplaintReport({
@@ -357,7 +191,6 @@ export function MyReports({ onNavigate }: MyReportsProps) {
         description,
         imageName: complaintForm.imageName,
       });
-
       toast.success('Đã gửi khiếu nại thành công');
       closeComplaintModal();
       loadProfile();
@@ -366,6 +199,47 @@ export function MyReports({ onNavigate }: MyReportsProps) {
     } finally {
       setComplaintForm((f) => ({ ...f, submitting: false }));
     }
+  };
+
+  const renderContent = () => {
+    if (activeTab === 'collectionReports')
+      return (
+        <CollectionReportsTab
+          profile={profile}
+          loading={loading}
+          error={error}
+          pages={pages}
+          pageLengths={pageLengths}
+          onRetry={() => loadProfile()}
+          onChangePage={changePage}
+          onCardClick={handleCardClick}
+          onViewLocation={handleViewLocation}
+          onViewComplaint={handleViewComplaint}
+        />
+      );
+    if (activeTab === 'complaintReports')
+      return (
+        <ComplaintReportsTab
+          profile={profile}
+          loading={loading}
+          error={error}
+          pages={pages}
+          pageLengths={pageLengths}
+          onRetry={() => loadProfile()}
+          onChangePage={changePage}
+        />
+      );
+    return (
+      <RewardHistoriesTab
+        profile={profile}
+        loading={loading}
+        error={error}
+        pages={pages}
+        pageLengths={pageLengths}
+        onRetry={() => loadProfile()}
+        onChangePage={changePage}
+      />
+    );
   };
 
   return (
@@ -377,7 +251,7 @@ export function MyReports({ onNavigate }: MyReportsProps) {
         </div>
         <button
           type="button"
-          onClick={loadProfile}
+          onClick={() => loadProfile()}
           className="h-10 px-4 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50"
         >
           Làm mới
@@ -403,6 +277,7 @@ export function MyReports({ onNavigate }: MyReportsProps) {
 
       {renderContent()}
 
+      {/* Location Modal */}
       {locationModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl border border-gray-200">
@@ -443,6 +318,7 @@ export function MyReports({ onNavigate }: MyReportsProps) {
         </div>
       )}
 
+      {/* Complaint Modal */}
       {complaintModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl border border-gray-200">
