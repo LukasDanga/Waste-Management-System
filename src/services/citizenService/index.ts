@@ -74,6 +74,22 @@ export interface ComplaintReportRequest {
   imageName: string;
 }
 
+// Leaderboard & Areas
+export interface CitizenArea {
+  citizenAreaID: string;
+  name: string;
+  regionCode: string;
+  isActive: boolean;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  citizenProfileID: string;
+  displayName: string;
+  avatarName: string;
+  totalPoints: number;
+}
+
 const getAuthHeaders = (): Record<string, string> => {
   const rawToken = localStorage.getItem('ecowaste_access_token');
   const token = rawToken ? rawToken.replace(/^"|"$/g, '') : '';
@@ -352,4 +368,73 @@ export async function createComplaintReport(payload: ComplaintReportRequest) {
   } catch {
     return null;
   }
+}
+
+export async function fetchCitizenAreas(): Promise<CitizenArea[]> {
+  const res = await fetch(`${API_CONFIG.BASE_URL}/citizen/citizens/area`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    let message = 'Không tải được danh sách khu vực';
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  const data = await res.json();
+  const list = data?.payload ?? data?.data ?? data;
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((a: CitizenArea) => a.isActive !== false)
+    .map((a: CitizenArea) => ({
+      citizenAreaID: a.citizenAreaID,
+      name: a.name,
+      regionCode: a.regionCode ?? '',
+      isActive: a.isActive !== false,
+    }));
+}
+
+export async function fetchLeaderboard(citizenAreaId: string): Promise<LeaderboardEntry[]> {
+  const params = new URLSearchParams({ CitizenAreaId: citizenAreaId });
+  const res = await fetch(
+    `${API_CONFIG.BASE_URL}/citizen/citizens/leaderboard?${params.toString()}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        ...getAuthHeaders(),
+      },
+    },
+  );
+
+  if (!res.ok) {
+    let message = 'Không tải được bảng xếp hạng';
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  const data = await res.json();
+  const list = data?.payload ?? data?.data ?? data;
+  if (!Array.isArray(list)) return [];
+  return list.map((item: LeaderboardEntry) => ({
+    rank: item.rank,
+    citizenProfileID: item.citizenProfileID,
+    displayName: item.displayName ?? '',
+    avatarName: item.avatarName ?? 'default_avatar',
+    totalPoints: item.totalPoints ?? 0,
+  }));
 }
