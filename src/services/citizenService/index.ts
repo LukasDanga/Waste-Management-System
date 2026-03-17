@@ -74,6 +74,32 @@ export interface ComplaintReportRequest {
   imageName: string;
 }
 
+/** Khu vực trong response khiếu nại (admin) */
+export interface ComplaintReportCitizenArea {
+  citizenAreaID: string;
+  name: string;
+  regionCode: string;
+  minLat?: number;
+  maxLat?: number;
+  minLng?: number;
+  maxLng?: number;
+  isActive: boolean;
+}
+
+/** Một bản ghi khiếu nại từ API GET complaint-report */
+export interface ComplaintReportItem {
+  complaintReportID: string;
+  title: string;
+  description: string;
+  imageName: string;
+  status: number; // 0 = chờ, 1 = đang xử lý, 2 = đã giải quyết
+  reportAt: string;
+  adminNote: string | null;
+  collectionReportID: string;
+  citizenProfileID: string;
+  citizenArea: ComplaintReportCitizenArea;
+}
+
 // Leaderboard & Areas
 export interface CitizenArea {
   citizenAreaID: string;
@@ -437,4 +463,77 @@ export async function fetchLeaderboard(citizenAreaId: string): Promise<Leaderboa
     avatarName: item.avatarName ?? 'default_avatar',
     totalPoints: item.totalPoints ?? 0,
   }));
+}
+
+/** Lấy danh sách khiếu nại (dùng cho admin - Khiếu nại & Tranh chấp) */
+export async function fetchComplaintReports(): Promise<ComplaintReportItem[]> {
+  const res = await fetch(`${API_CONFIG.BASE_URL}/citizen/citizens/complaint-report`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    let message = 'Không tải được danh sách khiếu nại';
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  const data = await res.json();
+  const list = data?.payload ?? data?.data ?? data;
+  if (!Array.isArray(list)) return [];
+  return list.map((item: ComplaintReportItem) => ({
+    complaintReportID: item.complaintReportID,
+    title: item.title ?? '',
+    description: item.description ?? '',
+    imageName: item.imageName ?? '',
+    status: item.status ?? 0,
+    reportAt: item.reportAt ?? '',
+    adminNote: item.adminNote ?? null,
+    collectionReportID: item.collectionReportID ?? '',
+    citizenProfileID: item.citizenProfileID ?? '',
+    citizenArea: item.citizenArea ?? {
+      citizenAreaID: '',
+      name: '',
+      regionCode: '',
+      isActive: false,
+    },
+  }));
+}
+
+/** Giải quyết khiếu nại (admin) - PUT complaint-report/resolve (một số server trả 405 nếu dùng POST) */
+export async function resolveComplaintReport(
+  complaintReportId: string,
+  adminNote: string,
+): Promise<void> {
+  const res = await fetch(`${API_CONFIG.BASE_URL}/citizen/citizens/complaint-report/resolve`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({
+      ComplaintReportId: complaintReportId,
+      AdminNote: adminNote,
+    }),
+  });
+
+  if (!res.ok) {
+    let message = 'Giải quyết khiếu nại thất bại';
+    try {
+      const body = await res.json();
+      message = body?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
 }

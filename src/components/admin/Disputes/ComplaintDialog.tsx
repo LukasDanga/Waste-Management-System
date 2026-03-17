@@ -4,28 +4,33 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { Textarea } from '../../ui/textarea';
 import { Button } from '../../ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { SeverityBadge, StatusBadge } from './ComplaintBadges';
 import type { Complaint } from './types';
+import { API_CONFIG } from '@/config/api.config';
+
+function getImageUrl(imageName: string | undefined): string {
+  if (!imageName) return '';
+  if (/^https?:\/\//i.test(imageName)) return imageName;
+  const base = (API_CONFIG.IMAGE_BASE_URL || API_CONFIG.BASE_URL || '').replace(/\/+$/, '');
+  return base ? `${base}/${imageName}` : '';
+}
 
 interface ComplaintDialogProps {
   complaint: Complaint | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onResolve: (complaint: Complaint, action: string, note: string) => void;
+  onResolve: (complaint: Complaint, note: string) => void;
 }
 
 export function ComplaintDialog({ complaint, open, onOpenChange, onResolve }: ComplaintDialogProps) {
-  const [action, setAction] = useState('');
   const [note, setNote] = useState('');
 
   const handleResolve = () => {
-    if (!complaint || !action || !note) {
-      toast.error('Vui lòng nhập đầy đủ thông tin xử lý');
+    if (!complaint || !note.trim()) {
+      toast.error('Vui lòng nhập ghi chú xử lý');
       return;
     }
-    onResolve(complaint, action, note);
-    setAction('');
+    onResolve(complaint, note.trim());
     setNote('');
   };
 
@@ -79,6 +84,17 @@ export function ComplaintDialog({ complaint, open, onOpenChange, onResolve }: Co
             <div className="mt-1 p-4 bg-gray-50 rounded-lg border border-gray-200">{complaint.description}</div>
           </div>
 
+          {complaint.imageName && getImageUrl(complaint.imageName) && (
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Ảnh đính kèm</label>
+              <img
+                src={getImageUrl(complaint.imageName)}
+                alt="Đính kèm khiếu nại"
+                className="max-w-full max-h-64 rounded-lg border border-gray-200 object-contain"
+              />
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium text-gray-700 mb-3 block">Lịch sử trao đổi</label>
             <div className="space-y-3">
@@ -100,26 +116,11 @@ export function ComplaintDialog({ complaint, open, onOpenChange, onResolve }: Co
               <h3 className="font-semibold text-gray-900">Xử lý khiếu nại</h3>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Quyết định xử lý</label>
-                <Select value={action} onValueChange={setAction}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chọn quyết định" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="accepted">Chấp nhận khiếu nại</SelectItem>
-                    <SelectItem value="partial">Chấp nhận một phần</SelectItem>
-                    <SelectItem value="rejected">Từ chối khiếu nại</SelectItem>
-                    <SelectItem value="need-info">Cần thêm thông tin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Ghi chú xử lý</label>
                 <Textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Nhập chi tiết về cách xử lý khiếu nại..."
+                  placeholder="Nhập ghi chú xử lý khiếu nại..."
                   rows={4}
                 />
               </div>
@@ -142,7 +143,11 @@ export function ComplaintDialog({ complaint, open, onOpenChange, onResolve }: Co
                 <CheckCircle className="w-5 h-5 text-green-600" />
                 <span className="font-semibold text-green-900">Đã giải quyết</span>
               </div>
-              <p className="text-sm text-green-700">Khiếu nại đã được xử lý thành công vào ngày 11/01/2026</p>
+              {complaint.adminNote ? (
+                <p className="text-sm text-green-700">Ghi chú: {complaint.adminNote}</p>
+              ) : (
+                <p className="text-sm text-green-700">Khiếu nại đã được xử lý thành công.</p>
+              )}
             </div>
           )}
 
