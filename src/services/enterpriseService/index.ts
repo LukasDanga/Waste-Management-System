@@ -273,6 +273,7 @@ export interface CreateCollectionAssignmentRequest {
 export async function createCollectionAssignment(
   payload: CreateCollectionAssignmentRequest,
 ) {
+  payload.isCorrected = true;
   const res = await fetch(
     `${API_CONFIG.BASE_URL}/enterprise/enterprises/collection-assignment`,
     {
