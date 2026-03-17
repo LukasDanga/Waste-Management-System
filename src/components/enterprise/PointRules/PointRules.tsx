@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '../../ui/button';
 import { RuleFormDialog } from './RuleFormDialog';
 import { RuleInfoCard } from './RuleInfoCard';
@@ -87,8 +87,7 @@ export function PointRules() {
   };
 
   const handleSave = () => {
-    alert(editingRule ? 'Đã cập nhật quy tắc' : 'Đã thêm quy tắc mới');
-    handleCloseDialog();
+    setEditingRule(null);
   };
 
   return (

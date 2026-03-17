@@ -3,9 +3,10 @@ import { CollectorLayout } from './CollectorLayout';
 import { DashboardOverview } from './DashboardOverview/DashboardOverview';
 import { MyTasks } from './MyTasks/MyTasks';
 import { TaskDetail } from './MyTasks/TaskDetail';
-import { WorkHistory } from './WorkHistory/WorkHistory';
+import type { Task } from './MyTasks/types';
 import { PersonalStats } from './PersonalStats/PersonalStats';
 import { Profile } from './Profile/Profile';
+import { WorkHistory } from './WorkHistory/WorkHistory';
 
 interface CollectorDashboardProps {
   collectorData: {
@@ -17,6 +18,7 @@ interface CollectorDashboardProps {
 export function CollectorDashboard({ collectorData, onLogout }: CollectorDashboardProps) {
   const [activePage, setActivePage] = useState('overview');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
@@ -26,12 +28,11 @@ export function CollectorDashboard({ collectorData, onLogout }: CollectorDashboa
     }
   }, []);
 
-  const handleNavigate = (page: string, taskId?: string) => {
+  const handleNavigate = (page: string, taskId?: string, task?: Task) => {
     setActivePage(page);
     window.location.hash = `collector/${page}`;
-    if (taskId) {
-      setSelectedTaskId(taskId);
-    }
+    if (taskId) setSelectedTaskId(taskId);
+    if (task) setSelectedTask(task);
   };
 
   const renderContent = () => {
@@ -41,7 +42,13 @@ export function CollectorDashboard({ collectorData, onLogout }: CollectorDashboa
       case 'tasks':
         return <MyTasks onNavigate={handleNavigate} />;
       case 'task-detail':
-        return <TaskDetail taskId={selectedTaskId || '1'} onNavigate={handleNavigate} />;
+        return (
+          <TaskDetail
+            taskId={selectedTaskId || ''}
+            task={selectedTask}
+            onNavigate={handleNavigate}
+          />
+        );
       case 'history':
         return <WorkHistory onNavigate={handleNavigate} />;
       case 'stats':

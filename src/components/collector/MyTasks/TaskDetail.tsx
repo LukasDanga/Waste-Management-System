@@ -1,61 +1,108 @@
+import { ArrowLeft, Calendar, CheckCircle, Clock, Hash, Loader2, Upload, User } from 'lucide-react';
 import { useState } from 'react';
-import { MapPin, Phone, Clock, Weight, ArrowLeft, Upload, Navigation } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
-import { Label } from '../../ui/label';
-import { Textarea } from '../../ui/textarea';
+import { API_CONFIG } from '../../../config/api.config';
+import { useToast } from '../../../hooks/useToast';
+import { uploadReportImage } from '../../../services/citizenService';
+import { submitProof } from '../../../services/collectionService';
 import { Input } from '../../ui/input';
+import { Textarea } from '../../ui/textarea';
+import { StatusBadge } from './StatusBadge';
+import type { Task } from './types';
 
 interface TaskDetailProps {
   taskId: string;
+  task: Task | null;
   onNavigate: (page: string) => void;
 }
 
-export function TaskDetail({ taskId, onNavigate }: TaskDetailProps) {
-  const [currentStatus, setCurrentStatus] = useState<'assigned' | 'on-the-way' | 'collected'>('assigned');
-  const [actualWeight, setActualWeight] = useState('');
-  const [completionNotes, setCompletionNotes] = useState('');
-  const [afterImage, setAfterImage] = useState<File | null>(null);
+function formatDate(isoString: string): string {
+  if (!isoString || isoString.startsWith('0001')) return '—';
+  return new Date(isoString).toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
-  // Mock task data
-  const task = {
-    id: taskId,
-    reportId: '#R20240112-005',
-    address: '78 Nguyễn Huệ, Quận 1, TP.HCM',
-    type: 'Rác tái chế',
-    weight: '15kg',
-    scheduledTime: '14:00',
-    distance: '2.3km',
-    reporter: 'Nguyễn Văn A',
-    phone: '0901234567',
-    notes: 'Rác đã được phân loại sẵn, để ở cổng chính',
-    lat: 10.7769,
-    lng: 106.7009,
-    status: currentStatus,
-  };
+export function TaskDetail({ taskId, task, onNavigate }: TaskDetailProps) {
+  const [amountEstimated, setAmountEstimated] = useState(
+    task?.amountEstimated ? String(task.amountEstimated) : ''
+  );
+  const [note, setNote] = useState(task?.note ?? '');
+  const [proofImageName, setProofImageName] = useState('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const { success: toastSuccess, error: toastError } = useToast();
 
-  const handleStatusUpdate = () => {
-    if (currentStatus === 'assigned') {
-      setCurrentStatus('on-the-way');
-      alert('Đã cập nhật trạng thái: Đang đến');
-    } else if (currentStatus === 'on-the-way') {
-      setCurrentStatus('collected');
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    setProofFile(file);
+    setProofImageName('');
+    try {
+      setUploading(true);
+      const name = await uploadReportImage(file, 'CollectionReport');
+      setProofImageName(name);
+      toastSuccess('Tải ảnh lên thành công');
+    } catch (err: any) {
+      toastError(err?.message || 'Tải ảnh lên thất bại');
+      setProofFile(null);
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleComplete = () => {
-    if (!afterImage || !actualWeight) {
-      alert('Vui lòng upload ảnh và nhập khối lượng thực tế');
+  const handleSubmitProof = async () => {
+    if (!proofImageName) {
+      toastError('Vui lòng upload ảnh xác nhận');
       return;
     }
-    alert('Đã hoàn thành thu gom!');
-    onNavigate('tasks');
-  };
+    if (!amountEstimated || Number(amountEstimated) <= 0) {
+      toastError('Vui lòng nhập khối lượng thực tế');
+      return;
+    }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setAfterImage(e.target.files[0]);
+    try {
+      setSubmitting(true);
+      const res = await submitProof({
+        collectionTaskID: taskId,
+        imageName: proofImageName,
+        amountEstimated: Number(amountEstimated),
+        note: note,
+      });
+      if (res.success) {
+        toastSuccess(res.payload || 'Đã nộp bằng chứng hoàn thành thành công!');
+        onNavigate('tasks');
+      }
+    } catch (err: any) {
+      toastError(err?.message || 'Không thể nộp bằng chứng. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  if (!task) {
+    return (
+      <div className="p-8">
+        <button
+          onClick={() => onNavigate('tasks')}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Quay lại danh sách</span>
+        </button>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-yellow-700">
+          Không tìm thấy thông tin công việc.
+        </div>
+      </div>
+    );
+  }
+
+  const isCompleted = task.status === 'completed';
+  const canSubmitProof = task.status === 'on-the-way' || task.status === 'pending';
 
   return (
     <div className="p-8">
@@ -72,167 +119,137 @@ export function TaskDetail({ taskId, onNavigate }: TaskDetailProps) {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Chi tiết công việc</h1>
         <div className="flex items-center gap-3">
-          <span className="text-xl font-semibold text-green-600">{task.reportId}</span>
-          {currentStatus === 'assigned' && (
-            <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200 text-sm font-medium">
-              Đã phân công
-            </span>
-          )}
-          {currentStatus === 'on-the-way' && (
-            <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200 text-sm font-medium">
-              Đang đến
-            </span>
-          )}
-          {currentStatus === 'collected' && (
-            <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 border border-green-200 text-sm font-medium">
-              Đã thu gom
-            </span>
-          )}
+          <span className="text-lg font-mono text-green-600">
+            #{task.collectionTaskID.split('-')[0].toUpperCase()}
+          </span>
+          <StatusBadge status={task.status} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Task Info */}
+        {/* Left Column – Task Info */}
         <div className="space-y-6">
-          {/* Image */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Ảnh rác ban đầu</h2>
-            <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-              <span className="text-6xl">♻️</span>
-            </div>
-          </div>
 
-          {/* Basic Info */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Thông tin cơ bản</h2>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-green-600 mt-0.5" />
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Địa chỉ</div>
-                  <div className="font-medium text-gray-900">{task.address}</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xl mt-0.5">♻️</span>
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Loại rác</div>
-                  <div className="font-medium text-gray-900">{task.type}</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Weight className="w-5 h-5 text-green-600 mt-0.5" />
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Khối lượng ước tính</div>
-                  <div className="font-medium text-gray-900">{task.weight}</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-green-600 mt-0.5" />
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Thời gian hẹn</div>
-                  <div className="font-medium text-gray-900">{task.scheduledTime}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Reporter Info */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Người báo cáo</h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 font-semibold">{task.reporter.charAt(0)}</span>
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900">{task.reporter}</div>
-                  <div className="text-sm text-gray-500">Người dân</div>
-                </div>
-              </div>
-              <a
-                href={`tel:${task.phone}`}
-                className="flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
-              >
-                <Phone className="w-5 h-5 text-green-600" />
-                <span className="font-medium text-green-700">{task.phone}</span>
-              </a>
-            </div>
-          </div>
-
-          {/* Special Notes */}
-          {task.notes && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-              <h2 className="font-semibold text-gray-900 mb-2">Ghi chú đặc biệt</h2>
-              <p className="text-gray-700">{task.notes}</p>
+          {/* Proof Image (if submitted) */}
+          {task.imageName && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="font-semibold text-gray-900 mb-4">Ảnh xác nhận đã nộp</h2>
+              <img
+                src={`${API_CONFIG.IMAGE_BASE_URL}/${task.imageName}`}
+                alt="Proof"
+                className="w-full h-64 object-cover rounded-lg bg-gray-100"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src =
+                    'https://placehold.co/600x300?text=Không+tải+được+ảnh';
+                }}
+              />
+              <p className="text-xs text-gray-400 mt-2 truncate">{task.imageName}</p>
             </div>
           )}
 
-          {/* Map */}
+          {/* Task IDs */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Vị trí trên bản đồ</h2>
-            <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center mb-4">
-              <div className="text-center">
-                <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-500">Bản đồ hiển thị vị trí</p>
+            <h2 className="font-semibold text-gray-900 mb-4">Thông tin công việc</h2>
+            <div className="space-y-4 text-sm">
+              <div className="flex items-start gap-3">
+                <Hash className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-gray-500 mb-0.5">Task ID</div>
+                  <div className="font-mono text-gray-900 break-all">{task.collectionTaskID}</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Hash className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-gray-500 mb-0.5">Report ID</div>
+                  <div className="font-mono text-gray-900 break-all">{task.collectionReportID}</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <User className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <div className="text-gray-500 mb-0.5">Collector Profile ID</div>
+                  <div className="font-mono text-gray-900 break-all">{task.collectorProfileID}</div>
+                </div>
               </div>
             </div>
-            <button className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-              <Navigation className="w-5 h-5" />
-              Mở Google Maps để chỉ đường
-            </button>
+          </div>
+
+          {/* Timestamps */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="font-semibold text-gray-900 mb-4">Thời gian</h2>
+            <div className="space-y-4 text-sm">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <div>
+                  <div className="text-gray-500 mb-0.5">Được giao lúc</div>
+                  <div className="font-medium text-gray-900">{formatDate(task.assignedAt)}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                <div>
+                  <div className="text-gray-500 mb-0.5">Bắt đầu lúc</div>
+                  <div className={`font-medium ${task.startedAt.startsWith('0001') ? 'text-gray-400 italic' : 'text-gray-900'}`}>
+                    {formatDate(task.startedAt)}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <div>
+                  <div className="text-gray-500 mb-0.5">Hoàn thành lúc</div>
+                  <div className={`font-medium ${!task.completedAt ? 'text-gray-400 italic' : 'text-gray-900'}`}>
+                    {task.completedAt ? formatDate(task.completedAt) : 'Chưa hoàn thành'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Amount & Note */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="font-semibold text-gray-900 mb-4">Khối lượng & Ghi chú</h2>
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="text-gray-500">Khối lượng ước tính: </span>
+                <span className="font-medium text-gray-900">
+                  {task.amountEstimated > 0 ? `${task.amountEstimated} kg` : '—'}
+                </span>
+              </div>
+              {task.note ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="text-gray-500 mb-1">Ghi chú ban đầu</div>
+                  <div className="text-gray-900">{task.note}</div>
+                </div>
+              ) : (
+                <div className="text-gray-400 italic">Không có ghi chú</div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Right Column - Status Update */}
+        {/* Right Column – Submit Proof */}
         <div className="space-y-6">
-          {/* Status Update Section */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Cập nhật trạng thái</h2>
-            
-            <RadioGroup value={currentStatus} onValueChange={(value : any) => setCurrentStatus(value as any)}>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-gray-200">
-                  <RadioGroupItem value="assigned" id="assigned" />
-                  <Label htmlFor="assigned" className="cursor-pointer flex-1">
-                    Assigned (Đã phân công)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-gray-200">
-                  <RadioGroupItem value="on-the-way" id="on-the-way" />
-                  <Label htmlFor="on-the-way" className="cursor-pointer flex-1">
-                    On the way (Đang đến)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-gray-200">
-                  <RadioGroupItem value="collected" id="collected" />
-                  <Label htmlFor="collected" className="cursor-pointer flex-1">
-                    Collected (Đã thu gom)
-                  </Label>
-                </div>
+          {isCompleted ? (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+                <h2 className="font-semibold text-gray-900">Công việc đã hoàn thành</h2>
               </div>
-            </RadioGroup>
-
-            {currentStatus !== 'collected' && (
-              <button
-                onClick={handleStatusUpdate}
-                className="w-full mt-6 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
-                Cập nhật
-              </button>
-            )}
-          </div>
-
-          {/* Complete Collection Form */}
-          {currentStatus === 'collected' && (
+              <p className="text-gray-600 text-sm">
+                Công việc này đã được hoàn thành vào {formatDate(task.completedAt!)}.
+              </p>
+            </div>
+          ) : canSubmitProof ? (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="font-semibold text-gray-900 mb-4">Xác nhận hoàn thành</h2>
-              
+              <h2 className="font-semibold text-gray-900 mb-4">Nộp bằng chứng hoàn thành</h2>
+
               <div className="space-y-6">
                 {/* Upload Photo */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    📸 Chụp ảnh sau thu gom:
+                    📸 Ảnh xác nhận thu gom <span className="text-red-500">*</span>
                   </label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-400 transition-colors">
                     <input
@@ -240,67 +257,83 @@ export function TaskDetail({ taskId, onNavigate }: TaskDetailProps) {
                       accept="image/*"
                       onChange={handleImageUpload}
                       className="hidden"
-                      id="after-image"
+                      id="proof-image"
                     />
-                    <label htmlFor="after-image" className="cursor-pointer">
-                      {afterImage ? (
+                    <label htmlFor="proof-image" className="cursor-pointer">
+                      {uploading ? (
                         <div>
-                          <Upload className="w-12 h-12 text-green-600 mx-auto mb-2" />
-                          <p className="text-sm text-green-600 font-medium">{afterImage.name}</p>
+                          <Loader2 className="w-10 h-10 text-green-600 mx-auto mb-2 animate-spin" />
+                          <p className="text-sm text-green-600">Đang tải ảnh lên...</p>
+                        </div>
+                      ) : proofFile && proofImageName ? (
+                        <div>
+                          <Upload className="w-10 h-10 text-green-600 mx-auto mb-2" />
+                          <p className="text-sm text-green-600 font-medium">{proofFile.name}</p>
+                          <p className="text-xs text-gray-400 mt-1">✅ Đã upload • Click để chọn ảnh khác</p>
+                        </div>
+                      ) : proofFile && !proofImageName ? (
+                        <div>
+                          <Upload className="w-10 h-10 text-red-400 mx-auto mb-2" />
+                          <p className="text-sm text-red-500">{proofFile.name}</p>
+                          <p className="text-xs text-gray-400 mt-1">Upload thất bại • Click để thử lại</p>
                         </div>
                       ) : (
                         <div>
-                          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                          <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                           <p className="text-sm text-gray-600">Click để upload ảnh</p>
                           <p className="text-xs text-gray-400 mt-1">PNG, JPG lên đến 10MB</p>
                         </div>
                       )}
                     </label>
                   </div>
+
                 </div>
 
-                {/* Actual Weight */}
+                {/* Actual Amount */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ⚖️ Khối lượng thực tế:
+                    ⚖️ Khối lượng thực tế (kg) <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-2">
                     <Input
                       type="number"
-                      value={actualWeight}
-                      onChange={(e) => setActualWeight(e.target.value)}
+                      min="0"
+                      step="0.1"
+                      value={amountEstimated}
+                      onChange={(e) => setAmountEstimated(e.target.value)}
                       placeholder="Nhập khối lượng"
                       className="flex-1"
                     />
-                    <span className="flex items-center px-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
+                    <span className="flex items-center px-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 text-sm">
                       kg
                     </span>
                   </div>
                 </div>
 
-                {/* Notes */}
+                {/* Note */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    📝 Ghi chú (nếu có):
+                    📝 Ghi chú
                   </label>
                   <Textarea
-                    value={completionNotes}
-                    onChange={(e) => setCompletionNotes(e.target.value)}
-                    placeholder="Nhập ghi chú về công việc..."
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Nhập ghi chú về quá trình thu gom..."
                     rows={4}
                   />
                 </div>
 
-                {/* Action Buttons */}
+                {/* Actions */}
                 <div className="flex gap-3">
                   <button
-                    onClick={handleComplete}
-                    className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                    onClick={handleSubmitProof}
+                    disabled={submitting || uploading}
+                    className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                   >
-                    ✅ Hoàn thành
+                    {submitting ? 'Đang nộp...' : '✅ Nộp bằng chứng'}
                   </button>
                   <button
-                    onClick={() => setCurrentStatus('on-the-way')}
+                    onClick={() => onNavigate('tasks')}
                     className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                   >
                     Hủy
@@ -308,9 +341,10 @@ export function TaskDetail({ taskId, onNavigate }: TaskDetailProps) {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
   );
 }
+
