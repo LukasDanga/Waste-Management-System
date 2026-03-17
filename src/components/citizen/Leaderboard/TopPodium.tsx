@@ -10,7 +10,7 @@ export interface TopPodiumProps {
 }
 
 const rankMedal = ['🥇', '🥈', '🥉'] as const;
-const podiumOrder = [1, 0, 2] as const; // visual: 2nd, 1st, 3rd
+const podiumOrder = [1, 0, 2] as const; // thứ tự hiển thị: ô trái = hạng 2, ô giữa = hạng 1, ô phải = hạng 3
 
 export function TopPodium({ topThree }: TopPodiumProps) {
   return (
@@ -20,7 +20,8 @@ export function TopPodium({ topThree }: TopPodiumProps) {
     >
       {podiumOrder.map((index) => {
         const entry = topThree[index];
-        const rank = index === 0 ? 2 : index === 1 ? 1 : 3;
+        const slotRank = index === 0 ? 2 : index === 1 ? 1 : 3;
+        const rank = entry?.rank ?? slotRank;
         const isFirst = rank === 1;
         if (!entry) {
           return (

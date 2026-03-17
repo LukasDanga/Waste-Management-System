@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { fetchCitizenAreas, fetchLeaderboard } from '@/services/citizenService';
 import type { CitizenArea, LeaderboardEntry } from '@/services/citizenService';
 import { LeaderboardHeader } from './LeaderboardHeader';
@@ -77,12 +77,21 @@ export function Leaderboard() {
     else setLeaderboard([]);
   }, [selectedAreaId, loadLeaderboard]);
 
+  // Luôn sắp xếp theo điểm giảm dần: hạng 1 = nhiều điểm nhất (sửa lỗi API/mock trả thứ tự sai)
+  const sortedLeaderboard = useMemo(() => {
+    const sorted = [...leaderboard].sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      return a.rank - b.rank;
+    });
+    return sorted.map((entry, index) => ({ ...entry, rank: index + 1 }));
+  }, [leaderboard]);
+
   const topThree: [LeaderboardEntry?, LeaderboardEntry?, LeaderboardEntry?] = [
-    leaderboard[0],
-    leaderboard[1],
-    leaderboard[2],
+    sortedLeaderboard[0],
+    sortedLeaderboard[1],
+    sortedLeaderboard[2],
   ];
-  const rest = leaderboard.slice(3);
+  const rest = sortedLeaderboard.slice(3);
   const isEmpty = !leaderboardLoading && leaderboard.length === 0;
 
   return (
