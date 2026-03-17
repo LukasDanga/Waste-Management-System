@@ -11,7 +11,7 @@ export const MOCK_AREA_THANH_HOA: CitizenArea = {
   isActive: true,
 };
 
-/** Bảng xếp hạng mock - 10 công dân khu vực Thanh Hóa */
+/** Bảng xếp hạng mock - 10 công dân khu vực Thanh Hóa (đã sắp theo totalPoints giảm dần, rank 1 = nhiều điểm nhất) */
 export const MOCK_LEADERBOARD_THANH_HOA: LeaderboardEntry[] = [
   { rank: 1, citizenProfileID: 'mock-th-1', displayName: 'Nguyễn Văn An', avatarName: 'default_avatar', totalPoints: 320 },
   { rank: 2, citizenProfileID: 'mock-th-2', displayName: 'Trần Thị Bình', avatarName: 'default_avatar', totalPoints: 285 },
