@@ -3,6 +3,7 @@ import { ChevronRight, MapPin, LocateFixed, MessageSquareWarning } from 'lucide-
 import { StatusBadge } from './StatusBadge';
 import type { CitizenReportItem } from '../../../services/citizenService';
 import { API_CONFIG } from '../../../config/api.config';
+import { formatDateTime } from './types';
 
 interface ReportCardProps {
   report: CitizenReportItem;
@@ -35,15 +36,6 @@ const resolveImageUrl = (imageName?: string) => {
   return `${base}/${imageName}`;
 };
 
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'Chưa xác định';
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return 'Chưa xác định';
-  const d = date.toLocaleDateString('vi-VN');
-  const t = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
-  return `${d} ${t}`;
-};
-
 export function ReportCard({ report, onClick, onViewLocation, onViewComplaint }: ReportCardProps) {
   const wasteInfo = WASTE_LABELS[report.wasteType] || { emoji: '🗑️', label: report.wasteType || 'Không xác định' };
   const locationText = report.regionCode || `${report.gps?.latitude}, ${report.gps?.longitude}`;
@@ -72,7 +64,7 @@ export function ReportCard({ report, onClick, onViewLocation, onViewComplaint }:
               <MapPin className="h-4 w-4 text-emerald-600" />
               <span className="truncate">{locationText}</span>
             </p>
-            <p className="text-gray-500 flex items-center gap-1">🕐 {formatDate(report.reportAt)}</p>
+            <p className="text-gray-500 flex items-center gap-1">🕐 {formatDateTime(report.reportAt)}</p>
             <StatusBadge status={report.status} />
           </div>
         </div>

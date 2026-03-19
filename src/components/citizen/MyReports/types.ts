@@ -52,11 +52,31 @@ export const PAGE_SIZE = {
   reward: 10,
 };
 
+const VIETNAM_TIMEZONE = 'Asia/Ho_Chi_Minh';
+
+const normalizeApiDateTime = (raw: string) => {
+  const trimmed = raw.trim();
+  const hasTimezone = /(?:Z|[+\-]\d{2}:\d{2})$/i.test(trimmed);
+  const hasTimePartWithoutTimezone = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,7})?)?$/.test(trimmed);
+
+  // Some API fields are UTC but do not include timezone suffix.
+  if (!hasTimezone && hasTimePartWithoutTimezone) {
+    return `${trimmed.replace(' ', 'T')}Z`;
+  }
+
+  return trimmed;
+};
+
 export const formatDateTime = (value?: string) => {
   if (!value) return 'Chưa xác định';
-  const date = new Date(value);
+  const date = new Date(normalizeApiDateTime(value));
   if (Number.isNaN(date.getTime())) return 'Chưa xác định';
-  const d = date.toLocaleDateString('vi-VN');
-  const t = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const d = date.toLocaleDateString('vi-VN', { timeZone: VIETNAM_TIMEZONE });
+  const t = date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: VIETNAM_TIMEZONE,
+  });
   return `${d} ${t}`;
 };
